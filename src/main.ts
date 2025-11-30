@@ -32,7 +32,7 @@ async function bootstrap() {
   // ========== CORS - Configuración segura ==========
   const allowedOrigins = [
     'http://localhost:5173',
-    'http://127.0.0.1:5173',
+    'https://sacuanjoche.netlify.app',
     // Agregar aquí otros orígenes permitidos en producción
     // 'https://tudominio.com',
   ];
