@@ -77,6 +77,29 @@ export class RutaService {
       );
     }
 
+    // Validar que los pedidos no estén ya asignados a otra ruta
+    const pedidosAsignados = await this.rutaPedidoRepository.find({
+      where: { idPedido: In(pedidoIds) },
+      relations: ['ruta'],
+    });
+
+    if (pedidosAsignados.length > 0) {
+      const pedidosDuplicados = pedidosAsignados.map((rp) => ({
+        idPedido: rp.idPedido,
+        idRuta: rp.idRuta,
+        nombreRuta: rp.ruta?.nombre || `Ruta #${rp.idRuta}`,
+      }));
+
+      const mensajes = pedidosDuplicados.map(
+        (p) =>
+          `Pedido ${p.idPedido} ya está asignado a la ${p.nombreRuta} (ID: ${p.idRuta})`,
+      );
+
+      throw new BadRequestException(
+        `Los siguientes pedidos ya están asignados a otras rutas: ${mensajes.join('; ')}. Un pedido no puede estar asignado a múltiples rutas.`,
+      );
+    }
+
     const pedidosInvalidos = pedidos.filter(
       (pedido) =>
         !pedido.direccion ||
@@ -213,13 +236,46 @@ export class RutaService {
     return this.findOne(savedRuta.idRuta);
   }
 
-  async findAll(user: User): Promise<Ruta[]> {
+  async findAll(user: User, idEmpleadoFilter?: number): Promise<Ruta[]> {
     // Cargar la relación empleado si no está cargada
     let userWithEmpleado = user;
     if (!user.empleado && user.roles?.includes(ValidRoles.conductor)) {
       userWithEmpleado = await this.userRepository.findOne({
         where: { id: user.id },
         relations: ['empleado'],
+      });
+    }
+
+    // Si se proporciona un filtro por idEmpleado
+    if (idEmpleadoFilter !== undefined && idEmpleadoFilter !== null) {
+      // Verificar que el empleado existe
+      const empleado = await this.empleadoRepository.findOne({
+        where: { idEmpleado: idEmpleadoFilter },
+      });
+
+      if (!empleado) {
+        throw new NotFoundException(
+          `Empleado con ID ${idEmpleadoFilter} no encontrado.`,
+        );
+      }
+
+      // Si es conductor, solo puede ver sus propias rutas
+      const isConductor = userWithEmpleado?.roles?.includes(
+        ValidRoles.conductor,
+      );
+      const idEmpleadoUsuario = userWithEmpleado?.empleado?.idEmpleado;
+
+      if (isConductor && idEmpleadoUsuario !== idEmpleadoFilter) {
+        throw new ForbiddenException(
+          'No tiene permiso para ver las rutas de otros empleados. Solo puede ver sus propias rutas asignadas.',
+        );
+      }
+
+      // Filtrar por el idEmpleado especificado
+      return this.rutaRepository.find({
+        where: { idEmpleado: idEmpleadoFilter },
+        relations: ['rutaPedidos', 'empleado'],
+        order: { fechaCreacion: 'DESC' },
       });
     }
 

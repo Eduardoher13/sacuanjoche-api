@@ -5,11 +5,13 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBody,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
   ApiBearerAuth,
@@ -94,7 +96,8 @@ export class RutaController {
   @ApiResponse({ status: 201, description: 'Ruta creada', type: Ruta })
   @ApiResponse({
     status: 400,
-    description: 'Parámetros inválidos o pedidos sin coordenadas',
+    description:
+      'Parámetros inválidos, pedidos sin coordenadas o pedidos ya asignados a otra ruta',
   })
   create(@Body() createRutaDto: CreateRutaDto) {
     return this.rutaService.create(createRutaDto);
@@ -103,6 +106,13 @@ export class RutaController {
   @Get()
   @Auth(ValidRoles.admin, ValidRoles.vendedor, ValidRoles.conductor)
   @ApiOperation({ summary: 'Listar rutas optimizadas' })
+  @ApiQuery({
+    name: 'idEmpleado',
+    required: false,
+    type: Number,
+    description: 'Filtrar rutas por ID de empleado',
+    example: 3,
+  })
   @ApiResponse({
     status: 200,
     description: 'Listado de rutas',
@@ -135,8 +145,15 @@ export class RutaController {
       ],
     },
   })
-  findAll(@GetUser() user: User) {
-    return this.rutaService.findAll(user);
+  findAll(
+    @GetUser() user: User,
+    @Query('idEmpleado') idEmpleado?: string,
+  ) {
+    const idEmpleadoNumber =
+      idEmpleado && !isNaN(Number(idEmpleado))
+        ? Number(idEmpleado)
+        : undefined;
+    return this.rutaService.findAll(user, idEmpleadoNumber);
   }
 
   @Get(':idRuta')
