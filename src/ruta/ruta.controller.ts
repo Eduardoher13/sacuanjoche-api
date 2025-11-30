@@ -17,8 +17,9 @@ import {
 import { RutaService } from './ruta.service';
 import { CreateRutaDto } from './dto/create-ruta.dto';
 import { Ruta } from './entities/ruta.entity';
-import { Auth } from 'src/auth/decorators';
+import { Auth, GetUser } from 'src/auth/decorators';
 import { ValidRoles } from 'src/auth/interfaces';
+import { User } from 'src/auth/entities/user.entity';
 
 @ApiTags('Rutas')
 @ApiBearerAuth('JWT-auth')
@@ -134,8 +135,8 @@ export class RutaController {
       ],
     },
   })
-  findAll() {
-    return this.rutaService.findAll();
+  findAll(@GetUser() user: User) {
+    return this.rutaService.findAll(user);
   }
 
   @Get(':idRuta')
@@ -149,7 +150,11 @@ export class RutaController {
   })
   @ApiResponse({ status: 200, description: 'Ruta encontrada', type: Ruta })
   @ApiResponse({ status: 404, description: 'Ruta no encontrada' })
-  findOne(@Param('idRuta', ParseIntPipe) idRuta: number) {
-    return this.rutaService.findOne(idRuta);
+  @ApiResponse({ status: 403, description: 'No tiene permiso para ver esta ruta' })
+  findOne(
+    @Param('idRuta', ParseIntPipe) idRuta: number,
+    @GetUser() user: User,
+  ) {
+    return this.rutaService.findOne(idRuta, user);
   }
 }

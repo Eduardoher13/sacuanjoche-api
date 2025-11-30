@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -14,6 +15,8 @@ import { MapboxService } from '../common/mapbox/mapbox.service';
 import { ConfigService } from '@nestjs/config';
 import { Empleado } from '../empleado/entities/empleado.entity';
 import { Envio } from '../envio/entities/envio.entity';
+import { User } from '../auth/entities/user.entity';
+import { ValidRoles } from '../auth/interfaces';
 
 interface RutaStopInfo {
   pedido: Pedido;
@@ -37,6 +40,8 @@ export class RutaService {
     private readonly empleadoRepository: Repository<Empleado>,
     @InjectRepository(Envio)
     private readonly envioRepository: Repository<Envio>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly mapboxService: MapboxService,
     private readonly configService: ConfigService,
   ) {}
@@ -208,14 +213,36 @@ export class RutaService {
     return this.findOne(savedRuta.idRuta);
   }
 
-  async findAll(): Promise<Ruta[]> {
+  async findAll(user: User): Promise<Ruta[]> {
+    // Cargar la relación empleado si no está cargada
+    let userWithEmpleado = user;
+    if (!user.empleado && user.roles?.includes(ValidRoles.conductor)) {
+      userWithEmpleado = await this.userRepository.findOne({
+        where: { id: user.id },
+        relations: ['empleado'],
+      });
+    }
+
+    // Si es conductor, filtrar solo sus rutas
+    const isConductor = userWithEmpleado?.roles?.includes(ValidRoles.conductor);
+    const idEmpleado = userWithEmpleado?.empleado?.idEmpleado;
+
+    if (isConductor && idEmpleado) {
+      return this.rutaRepository.find({
+        where: { idEmpleado },
+        relations: ['rutaPedidos', 'empleado'],
+        order: { fechaCreacion: 'DESC' },
+      });
+    }
+
+    // Admin y vendedor ven todas las rutas
     return this.rutaRepository.find({
       relations: ['rutaPedidos', 'empleado'],
       order: { fechaCreacion: 'DESC' },
     });
   }
 
-  async findOne(idRuta: number): Promise<Ruta> {
+  async findOne(idRuta: number, user?: User): Promise<Ruta> {
     const ruta = await this.rutaRepository.findOne({
       where: { idRuta },
       relations: ['rutaPedidos', 'empleado'],
@@ -223,6 +250,28 @@ export class RutaService {
 
     if (!ruta) {
       throw new NotFoundException(`Ruta ${idRuta} no encontrada.`);
+    }
+
+    // Si se proporciona un usuario y es conductor, verificar que la ruta le pertenece
+    if (user) {
+      const isConductor = user.roles?.includes(ValidRoles.conductor);
+      if (isConductor) {
+        // Cargar la relación empleado si no está cargada
+        let userWithEmpleado = user;
+        if (!user.empleado) {
+          userWithEmpleado = await this.userRepository.findOne({
+            where: { id: user.id },
+            relations: ['empleado'],
+          });
+        }
+
+        const idEmpleado = userWithEmpleado?.empleado?.idEmpleado;
+        if (ruta.idEmpleado !== idEmpleado) {
+          throw new ForbiddenException(
+            'No tiene permiso para ver esta ruta. Solo puede ver las rutas asignadas a usted.',
+          );
+        }
+      }
     }
 
     ruta.rutaPedidos.sort((a, b) => a.secuencia - b.secuencia);
