@@ -31,7 +31,9 @@ export class EmpleadoService {
   async findAll(filters: FindEmpleadosDto) {
     const { limit = 10, offset = 0, q } = filters;
 
-    const qb = this.empleadoRepository.createQueryBuilder('empleado');
+    const qb = this.empleadoRepository
+      .createQueryBuilder('empleado')
+      .leftJoinAndSelect('empleado.user', 'user');
 
     qb.take(limit).skip(offset);
 
