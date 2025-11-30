@@ -10,13 +10,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { Cliente } from 'src/cliente/entities/cliente.entity';
 import { Empleado } from 'src/empleado/entities/empleado.entity';
 import { EncryptionService } from './services/encryption.service';
+import { LoginAttempt } from './entities/login-attempt.entity';
 
 @Module({
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, EncryptionService],
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([User, Cliente, Empleado]),
+    TypeOrmModule.forFeature([User, Cliente, Empleado, LoginAttempt]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -25,7 +26,7 @@ import { EncryptionService } from './services/encryption.service';
         return {
           secret: configService.get('JWT_SECRET'),
           signOptions: {
-            expiresIn: '2h',
+            expiresIn: '1h', // 1 hora de expiración
           },
         };
       },

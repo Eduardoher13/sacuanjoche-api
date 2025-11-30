@@ -4,6 +4,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 import { AccesorioModule } from './accesorio/accesorio.module';
 import { AccesoriosArregloModule } from './accesorios-arreglo/accesorios-arreglo.module';
@@ -40,6 +42,25 @@ import { NotificationsModule } from './notifications/notifications.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+
+    // ========== Rate Limiting (Throttler) ==========
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 60000, // 1 minuto
+        limit: 20, // 20 peticiones por minuto
+      },
+      {
+        name: 'medium',
+        ttl: 600000, // 10 minutos
+        limit: 100, // 100 peticiones por 10 minutos
+      },
+      {
+        name: 'long',
+        ttl: 3600000, // 1 hora
+        limit: 1000, // 1000 peticiones por hora
+      },
+    ]),
 
     TypeOrmModule.forRoot({
       ssl: process.env.STAGE === 'prod',
@@ -93,6 +114,13 @@ import { NotificationsModule } from './notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Aplicar ThrottlerGuard globalmente
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

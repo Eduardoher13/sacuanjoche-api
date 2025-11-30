@@ -18,12 +18,15 @@ import { Empleado } from 'src/empleado/entities/empleado.entity';
 import { UpdateUserRolesDto } from './dto/update-user-roles.dto';
 import { UserEstado, ClienteEstado } from 'src/common/enums';
 import { EncryptionService } from './services/encryption.service';
+import { LoginAttempt } from './entities/login-attempt.entity';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly maxFailedLoginAttempts: number;
-  private readonly loginBlockWindowMinutes: number;
+  private readonly loginBlockWindowMinutes: number; // Tiempo de bloqueo por usuario
+  private readonly maxFailedLoginAttemptsPerIP: number;
+  private readonly ipBlockWindowMinutes: number; // Tiempo de bloqueo por IP
 
   constructor(
     @InjectRepository(User)
@@ -32,6 +35,8 @@ export class AuthService {
     private readonly clienteRepository: Repository<Cliente>,
     @InjectRepository(Empleado)
     private readonly empleadoRepository: Repository<Empleado>,
+    @InjectRepository(LoginAttempt)
+    private readonly loginAttemptRepository: Repository<LoginAttempt>,
 
     private readonly jwtService: JwtService,
     private readonly encryptionService: EncryptionService,
@@ -43,7 +48,19 @@ export class AuthService {
     );
     this.loginBlockWindowMinutes = this.resolveEnvInt(
       'AUTH_LOGIN_BLOCK_MINUTES',
-      15,
+      10,
+      1,
+    );
+    // Intentos fallidos por IP: 5 intentos fallidos desde cualquier usuario
+    this.maxFailedLoginAttemptsPerIP = this.resolveEnvInt(
+      'AUTH_MAX_LOGIN_ATTEMPTS_PER_IP',
+      5,
+      3,
+    );
+    // Tiempo de bloqueo por IP (diferente al bloqueo por usuario)
+    this.ipBlockWindowMinutes = this.resolveEnvInt(
+      'AUTH_IP_BLOCK_MINUTES',
+      10,
       1,
     );
   }
@@ -132,11 +149,28 @@ export class AuthService {
     }
   }
 
-  async login(loginUserDto: LoginUserDto) {
+  async login(loginUserDto: LoginUserDto, ipAddress: string) {
     const startTime = Date.now();
     const MIN_RESPONSE_TIME_MS = 200; // Tiempo mínimo de respuesta para evitar timing attacks
 
     try {
+      // ========== VERIFICAR BLOQUEO POR IP (ANTES DE TODO) ==========
+      const ipBlockInfo = await this.checkAndBlockIP(ipAddress);
+      if (ipBlockInfo.isBlocked) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < MIN_RESPONSE_TIME_MS) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, MIN_RESPONSE_TIME_MS - elapsed),
+          );
+        }
+        const minutesRemaining = Math.ceil(
+          (ipBlockInfo.blockedUntil.getTime() - Date.now()) / (1000 * 60),
+        );
+        throw new UnauthorizedException(
+          `Demasiados intentos fallidos. Por favor, intente nuevamente en ${minutesRemaining} minuto${minutesRemaining !== 1 ? 's' : ''}.`,
+        );
+      }
+
       const { password, email } = loginUserDto;
       const normalizedEmail = email.toLowerCase().trim();
 
@@ -196,7 +230,8 @@ export class AuthService {
         bcrypt.compareSync(password, dummyHash);
       }
 
-      // Manejar intentos fallidos solo si el usuario existe
+      // ========== MANEJAR INTENTOS FALLIDOS POR USUARIO ==========
+      let userBlockedUntil: Date | null = null;
       if (user && !passwordMatches) {
         const now = new Date();
         const currentAttempts = user.loginAttempts ?? 0;
@@ -205,6 +240,7 @@ export class AuthService {
         if (nextAttempts >= this.maxFailedLoginAttempts) {
           const blockDurationMs = this.loginBlockWindowMinutes * 60 * 1000;
           const blockUntil = new Date(now.getTime() + blockDurationMs);
+          userBlockedUntil = blockUntil;
 
           await this.userRepository.update(user.id, {
             loginAttempts: 0,
@@ -217,8 +253,11 @@ export class AuthService {
         }
       }
 
-      // Si no hay usuario o la contraseña no coincide, usar mensaje genérico
+      // ========== MANEJAR INTENTOS FALLIDOS POR IP ==========
+      // Si el login falló (usuario no existe o contraseña incorrecta), registrar intento por IP
       if (!user || !passwordMatches) {
+        const ipBlockInfo = await this.recordFailedLoginAttempt(ipAddress);
+        
         // Asegurar tiempo mínimo de respuesta para evitar timing attacks
         const elapsed = Date.now() - startTime;
         if (elapsed < MIN_RESPONSE_TIME_MS) {
@@ -226,6 +265,27 @@ export class AuthService {
             setTimeout(resolve, MIN_RESPONSE_TIME_MS - elapsed),
           );
         }
+
+        // Si el usuario fue bloqueado, mostrar mensaje con minutos restantes
+        if (userBlockedUntil) {
+          const minutesRemaining = Math.ceil(
+            (userBlockedUntil.getTime() - Date.now()) / (1000 * 60),
+          );
+          throw new UnauthorizedException(
+            `Demasiados intentos fallidos. Por favor, intente nuevamente en ${minutesRemaining} minuto${minutesRemaining !== 1 ? 's' : ''}.`,
+          );
+        }
+
+        // Si la IP fue bloqueada, mostrar mensaje con minutos restantes
+        if (ipBlockInfo.isBlocked && ipBlockInfo.blockedUntil) {
+          const minutesRemaining = Math.ceil(
+            (ipBlockInfo.blockedUntil.getTime() - Date.now()) / (1000 * 60),
+          );
+          throw new UnauthorizedException(
+            `Demasiados intentos fallidos desde esta dirección. Por favor, intente nuevamente en ${minutesRemaining} minuto${minutesRemaining !== 1 ? 's' : ''}.`,
+          );
+        }
+
         throw new UnauthorizedException('Credenciales inválidas');
       }
 
@@ -254,12 +314,17 @@ export class AuthService {
             setTimeout(resolve, MIN_RESPONSE_TIME_MS - elapsed),
           );
         }
-        // Mensaje genérico que no revele información específica
-        throw new UnauthorizedException('Credenciales inválidas');
+        // Mostrar minutos restantes de bloqueo
+        const minutesRemaining = Math.ceil(
+          (lockedUntil.getTime() - now.getTime()) / (1000 * 60),
+        );
+        throw new UnauthorizedException(
+          `Demasiados intentos fallidos. Por favor, intente nuevamente en ${minutesRemaining} minuto${minutesRemaining !== 1 ? 's' : ''}.`,
+        );
       }
 
       // Si llegamos aquí, el usuario existe, la contraseña es correcta, está activo y no está bloqueado
-      // Limpiar intentos fallidos si existen
+      // Limpiar intentos fallidos del usuario si existen
       const currentAttempts = user.loginAttempts ?? 0;
       if (currentAttempts !== 0 || user.blockedUntil) {
         await this.userRepository.update(user.id, {
@@ -267,6 +332,9 @@ export class AuthService {
           blockedUntil: null,
         });
       }
+
+      // Limpiar intentos fallidos de la IP (login exitoso)
+      await this.clearIPLoginAttempts(ipAddress);
 
       const empleadoInfo = user.empleado
         ? {
@@ -351,6 +419,140 @@ export class AuthService {
       }
     }
     return fallback;
+  }
+
+  /**
+   * Verifica si una IP está bloqueada y retorna información del bloqueo
+   */
+  private async checkAndBlockIP(ipAddress: string): Promise<{
+    isBlocked: boolean;
+    blockedUntil: Date | null;
+  }> {
+    if (ipAddress === 'unknown') {
+      return { isBlocked: false, blockedUntil: null }; // No bloquear si no se puede determinar la IP
+    }
+
+    const now = new Date();
+    const loginAttempt = await this.loginAttemptRepository.findOne({
+      where: { ipAddress },
+    });
+
+    if (!loginAttempt) {
+      return { isBlocked: false, blockedUntil: null }; // No hay intentos registrados
+    }
+
+    // Si está bloqueado y el bloqueo aún es válido
+    if (loginAttempt.blockedUntil) {
+      const blockedUntil = new Date(loginAttempt.blockedUntil);
+      if (blockedUntil.getTime() > now.getTime()) {
+        this.logger.warn(
+          `Intento de login desde IP bloqueada: ${ipAddress} (bloqueada hasta ${blockedUntil.toISOString()})`,
+        );
+        return { isBlocked: true, blockedUntil }; // IP está bloqueada
+      } else {
+        // El bloqueo expiró, limpiar
+        await this.loginAttemptRepository.update(
+          { ipAddress },
+          {
+            attempts: 0,
+            blockedUntil: null,
+          },
+        );
+        return { isBlocked: false, blockedUntil: null };
+      }
+    }
+
+    return { isBlocked: false, blockedUntil: null };
+  }
+
+  /**
+   * Registra un intento fallido de login por IP
+   * Retorna información sobre si la IP fue bloqueada
+   */
+  private async recordFailedLoginAttempt(ipAddress: string): Promise<{
+    isBlocked: boolean;
+    blockedUntil: Date | null;
+  }> {
+    if (ipAddress === 'unknown') {
+      return { isBlocked: false, blockedUntil: null }; // No registrar si no se puede determinar la IP
+    }
+
+    const now = new Date();
+    let loginAttempt = await this.loginAttemptRepository.findOne({
+      where: { ipAddress },
+    });
+
+    if (!loginAttempt) {
+      // Crear nuevo registro
+      loginAttempt = this.loginAttemptRepository.create({
+        ipAddress,
+        attempts: 1,
+        blockedUntil: null,
+      });
+    } else {
+      // Incrementar intentos
+      loginAttempt.attempts += 1;
+    }
+
+    // Si se alcanzó el límite, bloquear la IP
+    if (loginAttempt.attempts >= this.maxFailedLoginAttemptsPerIP) {
+      const blockDurationMs = this.ipBlockWindowMinutes * 60 * 1000;
+      const blockUntil = new Date(now.getTime() + blockDurationMs);
+      loginAttempt.blockedUntil = blockUntil;
+      loginAttempt.attempts = 0; // Resetear contador después de bloquear
+
+      this.logger.warn(
+        `IP bloqueada por múltiples intentos fallidos: ${ipAddress} (bloqueada hasta ${blockUntil.toISOString()})`,
+      );
+
+      await this.loginAttemptRepository.save(loginAttempt);
+      return { isBlocked: true, blockedUntil: blockUntil };
+    }
+
+    await this.loginAttemptRepository.save(loginAttempt);
+    return { isBlocked: false, blockedUntil: null };
+  }
+
+  /**
+   * Limpia los intentos fallidos de una IP cuando el login es exitoso
+   */
+  private async clearIPLoginAttempts(ipAddress: string): Promise<void> {
+    if (ipAddress === 'unknown') {
+      return;
+    }
+
+    const loginAttempt = await this.loginAttemptRepository.findOne({
+      where: { ipAddress },
+    });
+
+    if (loginAttempt && loginAttempt.attempts > 0) {
+      // Solo limpiar si no está bloqueada
+      if (!loginAttempt.blockedUntil) {
+        await this.loginAttemptRepository.update(
+          { ipAddress },
+          { attempts: 0 },
+        );
+      }
+    }
+  }
+
+  /**
+   * Limpia registros antiguos de intentos de login (más de 24 horas)
+   * Debería ejecutarse periódicamente (ej: cada hora)
+   */
+  async cleanupOldLoginAttempts(): Promise<void> {
+    const oneDayAgo = new Date();
+    oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+
+    // Eliminar registros antiguos que no están bloqueados
+    await this.loginAttemptRepository
+      .createQueryBuilder()
+      .delete()
+      .where('fecha_actualizacion < :oneDayAgo', { oneDayAgo })
+      .andWhere('blocked_until IS NULL')
+      .execute();
+
+    this.logger.log('Limpieza de registros antiguos de intentos de login completada');
   }
 
   private handleDbErrors(error: any): never {
