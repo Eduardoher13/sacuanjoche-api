@@ -280,6 +280,7 @@ export class AuthService {
               )
               .join(' ')
               .trim(),
+            estado: user.empleado.estado,
           }
         : null;
 
@@ -295,6 +296,7 @@ export class AuthService {
               )
               .join(' ')
               .trim(),
+            estado: user.cliente.estado,
           }
         : null;
 
