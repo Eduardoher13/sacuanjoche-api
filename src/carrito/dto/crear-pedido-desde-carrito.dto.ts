@@ -1,9 +1,10 @@
-import { IsNotEmpty, IsNumber, IsString, IsDateString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
 import { NoSqlInjection } from '../../common/validators/no-sql-injection.decorator';
 import { NoRandomAddress } from '../../common/validators/no-random-address.decorator';
 import { NoExcessiveRepetition } from '../../common/validators/no-excessive-repetition.decorator';
+import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
 
 export class CrearPedidoDesdeCarritoDto {
   @ApiPropertyOptional({
@@ -39,12 +40,12 @@ export class CrearPedidoDesdeCarritoDto {
   idFolio: number;
 
   @ApiPropertyOptional({
-    description: 'Fecha estimada de entrega',
-    example: '2024-12-25T10:00:00.000Z',
+    description: 'Fecha estimada de entrega (formato: YYYY-MM-DD o DD/MM/YYYY)',
+    example: '2024-12-25',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'La fecha de entrega estimada debe ser una fecha válida' })
-  fechaEntregaEstimada?: Date;
+  @IsDateOnly({ message: 'La fecha de entrega estimada debe tener el formato YYYY-MM-DD o DD/MM/YYYY' })
+  fechaEntregaEstimada?: string;
 
   @ApiProperty({
     description: 'Dirección de entrega en texto',

@@ -384,8 +384,9 @@ export class CarritoService {
       }
 
       // Solo incluir fechaEntregaEstimada si está definida
-      if (fechaEntregaEstimada !== undefined) {
-        pedidoData.fechaEntregaEstimada = fechaEntregaEstimada;
+      // Convertir string de fecha (YYYY-MM-DD o DD/MM/YYYY) a Date
+      if (fechaEntregaEstimada !== undefined && fechaEntregaEstimada !== null) {
+        pedidoData.fechaEntregaEstimada = this.parseDateString(fechaEntregaEstimada);
       }
 
       const newPedido = this.pedidoRepository.create(pedidoData);
@@ -483,5 +484,55 @@ export class CarritoService {
       }
       handleDbException(error);
     }
+  }
+
+  /**
+   * Convierte un string de fecha (YYYY-MM-DD o DD/MM/YYYY) a un objeto Date
+   * @param dateString String de fecha en formato YYYY-MM-DD o DD/MM/YYYY
+   * @returns Objeto Date o null si el formato no es válido
+   */
+  private parseDateString(dateString: string): Date {
+    if (!dateString || typeof dateString !== 'string') {
+      return null as any;
+    }
+
+    // Formato YYYY-MM-DD
+    const isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+    // Formato DD/MM/YYYY
+    const ddmmyyyyPattern = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    let year: number, month: number, day: number;
+
+    if (isoPattern.test(dateString)) {
+      // Formato YYYY-MM-DD
+      [year, month, day] = dateString.split('-').map(Number);
+    } else if (ddmmyyyyPattern.test(dateString)) {
+      // Formato DD/MM/YYYY
+      const parts = dateString.split('/');
+      day = Number(parts[0]);
+      month = Number(parts[1]);
+      year = Number(parts[2]);
+    } else {
+      // Si no coincide con ningún formato, intentar parsear directamente
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        throw new BadRequestException(
+          `Formato de fecha inválido: ${dateString}. Use YYYY-MM-DD o DD/MM/YYYY`,
+        );
+      }
+      return date;
+    }
+
+    // Crear fecha (month - 1 porque Date usa 0-11 para meses)
+    const date = new Date(year, month - 1, day);
+    
+    // Validar que la fecha sea válida
+    if (isNaN(date.getTime())) {
+      throw new BadRequestException(
+        `Fecha inválida: ${dateString}. Verifique que la fecha sea correcta.`,
+      );
+    }
+
+    return date;
   }
 }
