@@ -33,6 +33,8 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:5173',
     'https://sacuanjoche.netlify.app',
+    'https://sacuanjocheback-24676.ondigitalocean.app', 
+
     // Agregar aquí otros orígenes permitidos en producción
     // 'https://tudominio.com',
   ];
