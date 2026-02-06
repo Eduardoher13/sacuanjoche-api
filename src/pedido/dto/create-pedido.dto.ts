@@ -50,7 +50,7 @@ export class CreatePedidoDto {
   })
   @IsNotEmpty({ message: 'El ID de la dirección es requerido' })
   @IsNumber({}, { message: 'El ID de la dirección debe ser un número' })
-  idDireccion: number;
+  idDireccion?: number;
 
   @ApiProperty({
     description: 'ID del folio',
