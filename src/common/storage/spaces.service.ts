@@ -25,6 +25,11 @@ export interface GenerateUploadUrlParams {
   acl?: 'private' | 'public-read';
 }
 
+export interface GenerateBatchUploadUrlsParams {
+  items?: GenerateUploadUrlParams[];
+  concurrency?: number;
+}
+
 export interface GeneratedUploadUrl {
   uploadUrl: string;
   expiresAt: string;
@@ -226,6 +231,61 @@ export class SpacesService {
       );
     }
   }
+
+
+    /** ====================================================================== */
+  /**                      ✅ GENERAR URLs FIRMADAS (LOTE)                   */
+  /** ====================================================================== */
+  async generateUploadUrlsBatch(
+    params: GenerateBatchUploadUrlsParams,
+  ): Promise<GeneratedUploadUrl[]> {
+    this.ensureConfigured();
+
+    const items = params.items ?? [];
+    if (!Array.isArray(items) || items.length === 0) return [];
+
+    const concurrency =
+      Number.isFinite(params.concurrency) && (params.concurrency as number) > 0
+        ? Math.floor(params.concurrency as number)
+        : 8;
+
+    // Reusa tu método actual (misma validación de tamaño, contentType, ACL, etc.)
+    return this.runWithConcurrency(items, concurrency, (item) =>
+      this.generateUploadUrl(item),
+    );
+  }
+
+  /** ====================================================================== */
+  /**                              UTILITARIOS                                */
+  /** ====================================================================== */
+
+  // ...existing code...
+
+  // ✅ NUEVO: helper interno sin dependencias para limitar concurrencia
+  private async runWithConcurrency<T, R>(
+    items: T[],
+    concurrency: number,
+    worker: (item: T, index: number) => Promise<R>,
+  ): Promise<R[]> {
+    const results: R[] = new Array(items.length);
+    let nextIndex = 0;
+
+    const runners = Array.from(
+      { length: Math.min(concurrency, items.length) },
+      async () => {
+        while (true) {
+          const current = nextIndex++;
+          if (current >= items.length) break;
+          results[current] = await worker(items[current], current);
+        }
+      },
+    );
+
+    await Promise.all(runners);
+    return results;
+  }
+
+
 
   /** ====================================================================== */
   /**                             OBJETO PÚBLICO                              */
