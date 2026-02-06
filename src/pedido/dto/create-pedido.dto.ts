@@ -47,8 +47,9 @@ export class CreatePedidoDto {
   @ApiProperty({
     description: 'ID de la dirección de entrega',
     example: 1,
+    required: false,
   })
-  @IsNotEmpty({ message: 'El ID de la dirección es requerido' })
+  @IsOptional()
   @IsNumber({}, { message: 'El ID de la dirección debe ser un número' })
   idDireccion?: number;
 
