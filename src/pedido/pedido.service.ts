@@ -178,11 +178,14 @@ export class PedidoService {
         `El cliente no fue encontrado o no existe`,
       );
 
-      const direccion = await findEntityOrFail(
-        this.direccionRepository,
-        { idDireccion: idDireccion },
-        `La dirección no fue encontrada o no existe`,
-      );
+      // SOLO si el cliente seleccionó en mapa (mandó idDireccion)
+      const direccion = idDireccion
+        ? await findEntityOrFail(
+            this.direccionRepository,
+            { idDireccion: idDireccion },
+            `La dirección no fue encontrada o no existe`,
+          )
+        : null;
 
       const contactoEntrega = await findEntityOrFail(
         this.contactoEntregaRepository,
@@ -240,14 +243,15 @@ export class PedidoService {
         ...pedido,
         estado: estadoInicial,
         canal: canalNormalizado,
-        idPago: pago?.idPago, // Asociar el pago si existe
-        totalProductos: 0, // Se calculará automáticamente cuando se agreguen las líneas de detalle
-        totalPedido: 0, // Se calculará automáticamente cuando se agreguen las líneas de detalle
+        idPago: pago?.idPago,
+        totalProductos: 0,
+        totalPedido: 0,
         numeroPedido,
         idFolio,
         empleado,
         cliente,
-        direccion,
+        //  si no hay map pin, no bloquee el pedido (direccionTxt ya viene)
+        ...(direccion ? { direccion } : {}),
         contactoEntrega,
       };
 
