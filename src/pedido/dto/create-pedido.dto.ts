@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString, IsDecimal, Min, IsOptional, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsDecimal, Min, IsOptional, IsEnum, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { PedidoCanal } from '../../common/enums';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
@@ -77,13 +77,13 @@ export class CreatePedidoDto {
   // @Min(0, { message: 'El total de productos debe ser mayor o igual a 0' })
   // totalProductos: number;
 
-  @ApiProperty({
-    description: 'Fecha estimada de entrega (formato: YYYY-MM-DD o DD/MM/YYYY)',
-    example: '2024-12-25',
+    @ApiProperty({
+    description: 'Fecha estimada de entrega (formato: YYYY-MM-DD o ISO con hora)',
+    example: '2024-12-25T14:30:00.000Z',
     required: false,
   })
   @IsOptional()
-  @IsDateOnly({ message: 'La fecha de entrega estimada debe tener el formato YYYY-MM-DD o DD/MM/YYYY' })
+  @IsDateString({}, { message: 'La fecha de entrega estimada debe ser una fecha válida (formato ISO 8601)' })
   fechaEntregaEstimada?: string;
 
   @ApiProperty({
