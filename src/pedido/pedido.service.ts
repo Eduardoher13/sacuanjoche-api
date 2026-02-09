@@ -376,11 +376,20 @@ export class PedidoService {
         `El cliente no fue encontrado o no existe`,
       );
 
-      const direccion = await findEntityOrFail(
-        this.direccionRepository,
-        { idDireccion: idDireccion },
-        `La dirección no fue encontrada o no existe`,
-      );
+      // ✅ Dirección opcional: solo validar/buscar si viene idDireccion.
+      // - undefined: no tocar la dirección actual
+      // - null: quitar dirección (si tu negocio lo permite)
+      // - number: asignar la dirección encontrada
+      const direccion =
+        idDireccion === undefined
+          ? undefined
+          : idDireccion === null
+            ? null
+            : await findEntityOrFail(
+                this.direccionRepository,
+                { idDireccion: idDireccion },
+                `La dirección no fue encontrada o no existe`,
+              );
 
       const contactoEntrega = await findEntityOrFail(
         this.contactoEntregaRepository,
@@ -393,7 +402,7 @@ export class PedidoService {
         ...toUpdate,
         empleado,
         cliente,
-        direccion,
+        ...(direccion !== undefined ? { direccion } : {}),
         contactoEntrega,
       };
 

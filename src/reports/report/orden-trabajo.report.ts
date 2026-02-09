@@ -53,26 +53,14 @@ export class OrdenTrabajoReport {
       );
     }
 
-    // Cargar el logo
-    const logoPath = join(process.cwd(), 'src', 'assets', 'logo-flori.png');
-    let logoBase64 = '';
-    if (fs.existsSync(logoPath)) {
-      const logoBuffer = fs.readFileSync(logoPath);
-      logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-    }
-
-    // Datos de la empresa
-    const empresaNombre = 'Floristería Sacuanjoche';
-    const empresaDireccion = 'Montoya 2 c. al lago 1½ c. abajo';
-    const empresaTelefono = 'Tel: 2222 5776';
-    const empresaCiudad = 'Managua, Nicaragua';
-
     // Datos del pedido
-    const direccionEntrega = pedidoCompleto.direccionTxt || pedidoCompleto.direccion?.formattedAddress || '';
+    const direccionEntrega =
+      pedidoCompleto.direccionTxt ||
+      pedidoCompleto.direccion?.formattedAddress ||
+      '';
     const clienteNombre = pedidoCompleto.cliente
       ? `${pedidoCompleto.cliente.primerNombre} ${pedidoCompleto.cliente.primerApellido}`
       : '';
-    const telefonoCliente = pedidoCompleto.cliente?.telefono || pedidoCompleto.contactoEntrega?.telefono || '';
     const telefonoOficina = pedidoCompleto.contactoEntrega?.telefono || '';
 
     // Arreglos florales
@@ -90,253 +78,95 @@ export class OrdenTrabajoReport {
       : 0;
     const numFactura = pedidoCompleto.factura?.numFactura || '';
 
-    // Fecha de entrega
     const fechaEntrega = pedidoCompleto.fechaEntregaEstimada
-      ? new Date(pedidoCompleto.fechaEntregaEstimada).toLocaleDateString('es-NI')
+      ? new Date(pedidoCompleto.fechaEntregaEstimada).toLocaleDateString(
+          'es-NI',
+          {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          },
+        )
       : '';
 
-    // Definición del documento PDF
+    const mensaje = pedidoCompleto.mensajePedido || '';
+
+    const positions = {
+      enviarseA: { x: 135, y: 205 },
+      solicitadoPor: { x: 150, y: 300 },
+      telOficina: { x: 420, y: 340 },
+      arreglosStart: { x: 220, y: 380, gap: 20 },
+      cintaTarjeta: { x: 190, y: 560 },
+      valor: { x: 140, y: 610 },
+      transporte: { x: 375, y: 610 },
+      factura: { x: 490, y: 610 },
+      fechaEntrega: { x: 160, y: 740 },
+    };
+
+    const content: any[] = [
+      {
+        text: direccionEntrega,
+        fontSize: 10,
+        absolutePosition: positions.enviarseA,
+      },
+      {
+        text: clienteNombre,
+        fontSize: 10,
+        absolutePosition: positions.solicitadoPor,
+      },
+      {
+        text: telefonoOficina,
+        fontSize: 10,
+        absolutePosition: positions.telOficina,
+      },
+      ...Array.from({ length: Math.max(4, arreglosFlorales.length) }).map(
+        (_, i) => ({
+          text: arreglosFlorales[i] || '',
+          fontSize: 10,
+          absolutePosition: {
+            x: positions.arreglosStart.x,
+            y: positions.arreglosStart.y + positions.arreglosStart.gap * i,
+          },
+        }),
+      ),
+      {
+        text: mensaje,
+        fontSize: 10,
+        absolutePosition: positions.cintaTarjeta,
+      },
+      {
+        text: valor ? valor.toFixed(2) : '',
+        fontSize: 10,
+        absolutePosition: positions.valor,
+      },
+      {
+        text: transporte ? transporte.toFixed(2) : '',
+        fontSize: 10,
+        absolutePosition: positions.transporte,
+      },
+      {
+        text: numFactura,
+        fontSize: 10,
+        absolutePosition: positions.factura,
+      },
+      {
+        text: fechaEntrega,
+        fontSize: 10,
+        absolutePosition: positions.fechaEntrega,
+      },
+    ];
+
     const docDefinition: TDocumentDefinitions = {
       pageSize: 'LETTER',
-      pageMargins: [40, 50, 40, 50],
+      pageOrientation: 'portrait',
+      pageMargins: [0, 0, 0, 0],
       defaultStyle: {
         font: 'Roboto',
         fontSize: 10,
         color: '#000000',
+        lineHeight: 1.1,
       },
-      content: [
-        // HEADER
-        {
-          columns: [
-            {
-              image: logoBase64 || '',
-              width: 60,
-              height: 60,
-              fit: [60, 60],
-              margin: [0, 0, 0, 0],
-            },
-            {
-              width: '*',
-              alignment: 'center',
-              stack: [
-                {
-                  text: empresaNombre,
-                  fontSize: 20,
-                  bold: true,
-                  margin: [0, 0, 0, 5],
-                  color: '#000000',
-                  alignment: 'center',
-                },
-                {
-                  text: `${empresaDireccion} ${empresaTelefono}`,
-                  fontSize: 9,
-                  margin: [0, 0, 0, 2],
-                  alignment: 'center',
-                },
-                {
-                  text: empresaCiudad,
-                  fontSize: 9,
-                  margin: [0, 0, 0, 10],
-                  alignment: 'center',
-                },
-                {
-                  text: 'ORDEN DE TRABAJO',
-                  fontSize: 18,
-                  bold: true,
-                  alignment: 'center',
-                  margin: [0, 10, 0, 0],
-                },
-              ],
-            },
-            {
-              width: 60,
-              text: '',
-            },
-          ],
-          margin: [0, 0, 0, 20],
-        },
-
-        // ENVIARSE A
-        {
-          text: 'Enviarse a:',
-          fontSize: 10,
-          bold: true,
-          margin: [0, 0, 0, 5],
-        },
-        {
-          text: direccionEntrega || '________________',
-          fontSize: 10,
-          margin: [0, 0, 0, 15],
-        },
-
-        // SOLICITADO POR Y TEL OFICINA
-        {
-          columns: [
-            {
-              width: '60%',
-              stack: [
-                {
-                  text: 'Solicitado por:',
-                  fontSize: 10,
-                  bold: true,
-                  margin: [0, 0, 0, 5],
-                },
-                {
-                  text: clienteNombre || '________________',
-                  fontSize: 10,
-                },
-              ],
-            },
-            {
-              width: '40%',
-              stack: [
-                {
-                  text: 'Tel Oficina:',
-                  fontSize: 10,
-                  bold: true,
-                  margin: [0, 0, 0, 5],
-                },
-                {
-                  text: telefonoOficina || '________________',
-                  fontSize: 10,
-                },
-              ],
-            },
-          ],
-          margin: [0, 0, 0, 20],
-        },
-
-        // ARREGLOS FLORALES
-        {
-          text: 'ARREGLOS FLORALES:',
-          fontSize: 10,
-          bold: true,
-          margin: [0, 0, 0, 5],
-        },
-        ...((arreglosFlorales.length > 0
-          ? arreglosFlorales.map((arreglo) => ({
-              text: arreglo,
-              fontSize: 10,
-              margin: [0, 0, 0, 3],
-            }))
-          : [
-              {
-                text: '________________',
-                fontSize: 10,
-                margin: [0, 0, 0, 3],
-              },
-            ]) as any[]),
-        {
-          text: '',
-          fontSize: 10,
-          margin: [0, 0, 0, 12],
-        },
-
-        // CINTA Y/O TARJETA
-        {
-          columns: [
-            {
-              width: '50%',
-              stack: [
-                {
-                  text: 'Cinta y/o Tarjeta:',
-                  fontSize: 10,
-                  bold: true,
-                  margin: [0, 0, 0, 5],
-                },
-                {
-                  text: '________________',
-                  fontSize: 10,
-                },
-              ],
-            },
-          ],
-          margin: [0, 0, 0, 20],
-        },
-
-        // DATOS FINANCIEROS (solo Valor, Transporte y Factura N°)
-        {
-          columns: [
-            {
-              width: '50%',
-              stack: [
-                {
-                  columns: [
-                    {
-                      text: 'Valor: C$',
-                      fontSize: 10,
-                      bold: true,
-                      width: 'auto',
-                    },
-                    {
-                      text: valor.toFixed(2),
-                      fontSize: 10,
-                      alignment: 'right',
-                      width: '*',
-                    },
-                  ],
-                  margin: [0, 0, 0, 8],
-                },
-                {
-                  columns: [
-                    {
-                      text: 'Transporte:',
-                      fontSize: 10,
-                      bold: true,
-                      width: 'auto',
-                    },
-                    {
-                      text: transporte.toFixed(2),
-                      fontSize: 10,
-                      alignment: 'right',
-                      width: '*',
-                    },
-                  ],
-                  margin: [0, 0, 0, 8],
-                },
-                {
-                  columns: [
-                    {
-                      text: 'Factura N°',
-                      fontSize: 10,
-                      bold: true,
-                      width: 'auto',
-                    },
-                    {
-                      text: numFactura || '________________',
-                      fontSize: 10,
-                      alignment: 'right',
-                      width: '*',
-                    },
-                  ],
-                  margin: [0, 0, 0, 8],
-                },
-              ],
-            },
-          ],
-          margin: [0, 0, 0, 30],
-        },
-
-        // FOOTER (sin líneas, solo texto con guiones bajos)
-        {
-          columns: [
-            {
-              width: '50%',
-              text: `Fecha Entrega: ${fechaEntrega || '________________'}`,
-              fontSize: 10,
-              bold: false,
-            },
-            {
-              width: '50%',
-              text: 'Recibí conforme: _________________________',
-              fontSize: 10,
-              bold: false,
-              alignment: 'right',
-            },
-          ],
-          margin: [0, 30, 0, 0],
-        },
-      ],
+      content,
     };
 
     return this.printerService.createPdf(docDefinition);

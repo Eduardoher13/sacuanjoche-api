@@ -33,8 +33,8 @@ export class Pedido {
   @Column({ name: 'id_cliente' })
   idCliente: number;
 
-  @Column({ name: 'id_direccion' })
-  idDireccion: number;
+  @Column({ name: 'id_direccion', nullable: true })
+  idDireccion: number | null;
 
   @Column({ name: 'id_contacto_entrega' })
   idContactoEntrega: number;
@@ -61,6 +61,14 @@ export class Pedido {
 
   @Column({ name: 'direccion_txt', type: 'text' })
   direccionTxt: string;
+
+  @Column({
+    name: 'mensaje_pedido',
+    type: 'varchar',
+    length: 256,
+    default: '',
+  })
+  mensajePedido: string;
 
   @Column({
     name: 'total_pedido',
@@ -107,9 +115,12 @@ export class Pedido {
   @JoinColumn({ name: 'id_cliente' })
   cliente: Cliente;
 
-  @ManyToOne(() => Direccion, (direccion) => direccion.pedidos)
+  @ManyToOne(() => Direccion, (direccion) => direccion.pedidos, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'id_direccion' })
-  direccion: Direccion;
+  direccion: Direccion | null;
 
   @ManyToOne(
     () => ContactoEntrega,

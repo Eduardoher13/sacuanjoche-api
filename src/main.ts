@@ -31,9 +31,11 @@ async function bootstrap() {
 
   // ========== CORS - Configuración segura ==========
   const allowedOrigins = [
+    'http://localhost:3000', // Para pruebas locales con Postman o frontend local
     'http://localhost:5173',
     'https://sacuanjoche.netlify.app',
     'https://sacuanjocheback-24676.ondigitalocean.app', 
+    'http://127.0.0.1:3000',
 
     // Agregar aquí otros orígenes permitidos en producción
     // 'https://tudominio.com',

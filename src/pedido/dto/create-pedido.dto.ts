@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsString, IsDecimal, Min, IsOptional, IsEnum, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsDecimal, Min, IsOptional, IsEnum, IsDateString, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { PedidoCanal } from '../../common/enums';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
@@ -51,7 +51,7 @@ export class CreatePedidoDto {
   })
   @IsOptional()
   @IsNumber({}, { message: 'El ID de la dirección debe ser un número' })
-  idDireccion?: number;
+  idDireccion?: number | null; // Permitir null para casos sin mapa
 
   @ApiProperty({
     description: 'ID del folio',
@@ -98,6 +98,17 @@ export class CreatePedidoDto {
   @NoRandomAddress()
   @NoExcessiveRepetition(4)
   direccionTxt: string;
+
+  @ApiProperty({
+    description: 'Mensaje/carta para el arreglo (obligatorio, máx 256 caracteres)',
+    example: 'Feliz cumpleaños, con mucho cariño. Te queremos.',
+    maxLength: 256,
+  })
+  @IsNotEmpty({ message: 'El mensaje del pedido es requerido' })
+  @IsString({ message: 'El mensaje del pedido debe ser un texto' })
+  @MaxLength(256, { message: 'El mensaje del pedido no puede exceder 256 caracteres' })
+  @NoExcessiveRepetition(6)
+  mensajePedido: string;
 
   // @ApiProperty({
   //   description: 'Costo de envío del pedido',
