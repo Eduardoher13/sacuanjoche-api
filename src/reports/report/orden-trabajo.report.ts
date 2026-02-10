@@ -143,7 +143,7 @@ export class OrdenTrabajoReport {
       ),
       {
         text: mensaje,
-        fontSize: 10,
+        fontSize: 7,
         absolutePosition: positions.cintaTarjeta,
       },
       {
