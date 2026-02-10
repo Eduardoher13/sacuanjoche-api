@@ -93,29 +93,32 @@ export class OrdenTrabajoReport {
 
     // Conversión de cm a puntos para pdfmake
     const CM = 28.3464567;
+    const PAGE_WIDTH = Math.round(13.7 * CM);
     // Posiciones para las medidas exactas solicitadas (13.7cm x 21.4cm), más a la izquierda y arriba
     const positions = {
       // Enviarse a: primera línea (más arriba), un poco a la derecha
-      enviarseA: { x: 150, y: 125 },
+      enviarseA: { x: 110, y: 105 },
       // Solicitado por y Tel Oficina en la misma línea
-      solicitadoPor: { x: 150 , y: 155 },
+      solicitadoPor: { x: 150 , y: 145 },
       telOficina: { x: 270, y: 180 },
       // Arreglos florales más a la derecha
       arreglosStart: { x: 240, y: 260, gap: 20 },
       cintaTarjeta: { x: 160, y: 330 },
       // Valor: más a la izquierda, manteniendo la altura relativa
-      valor: { x: 130, y: 290 },
-      transporte: { x: 230, y: 420 },
+      valor: { x: 110, y: 320 },
+      transporte: { x: 230, y: 3 },
       // Factura: abajo a la derecha, un poco más arriba que la fecha
-      factura: { x: 260, y: 290},
+      factura: { x: 260, y: 315},
       // Fecha: abajo a la izquierda
-      fechaEntrega: { x: 100, y: 400 },
+      fechaEntrega: { x: 135, y: 400 },
     };
 
     const content: any[] = [
       {
         text: direccionEntrega,
         fontSize: 10,
+        // Si el texto es largo, se partirá en varias líneas dentro de este ancho
+        width: Math.max(120, PAGE_WIDTH - positions.enviarseA.x - 20),
         absolutePosition: positions.enviarseA,
       },
       {
