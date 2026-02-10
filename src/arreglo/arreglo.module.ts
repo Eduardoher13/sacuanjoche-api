@@ -10,11 +10,13 @@ import { ArreglosMediaController } from './controllers/arreglos-media.controller
 import { ArregloFlor } from 'src/arreglo-flor/entities/arreglo-flor.entity';
 import { CatalogoController } from './controllers/catalogo.controller';
 import { AuthModule } from 'src/auth/auth.module';
+import { StorageModule } from 'src/common/storage/storage.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Arreglo, FormaArreglo, ArregloMedia, ArregloFlor]),
     AuthModule,
+    StorageModule,
   ],
   controllers: [
     ArregloController,

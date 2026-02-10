@@ -317,6 +317,57 @@ export class SpacesService {
   }
 
   /** ====================================================================== */
+  /**                      SUBIR BUFFER DIRECTO AL BUCKET                    */
+  /** ====================================================================== */
+  async uploadObject(params: {
+    buffer: Buffer;
+    contentType: string;
+    keyPrefix?: string;
+    fileName?: string;
+    acl?: 'private' | 'public-read';
+    metadata?: Record<string, string>;
+  }): Promise<{ objectKey: string; publicUrl: string }> {
+    this.ensureConfigured();
+
+    if (!params.buffer || params.buffer.length === 0) {
+      throw new InternalServerErrorException('Buffer vacío.');
+    }
+    if (!params.contentType) {
+      throw new InternalServerErrorException('ContentType requerido.');
+    }
+
+    const folder = params.keyPrefix?.replace(/\/$/, '') ?? 'uploads';
+    const extension = this.resolveExtension(params.contentType, params.fileName);
+    const key = `${folder}/${this.buildObjectName(extension)}`;
+    const acl = params.acl ?? this.defaultAcl;
+
+    try {
+      await this.client!.send(
+        new PutObjectCommand({
+          Bucket: this.bucket!,
+          Key: key,
+          Body: params.buffer,
+          ACL: acl,
+          ContentType: params.contentType,
+          Metadata: params.metadata,
+          CacheControl: 'max-age=31536000',
+        }),
+      );
+
+      return {
+        objectKey: key,
+        publicUrl: this.buildPublicUrl(key),
+      };
+    } catch (error: any) {
+      this.logError('Error subiendo objeto', { key, contentType: params.contentType }, error);
+      this.handleSSLError(error);
+      throw new InternalServerErrorException(
+        `No se pudo subir el archivo: ${error.message || 'error desconocido'}`,
+      );
+    }
+  }
+
+  /** ====================================================================== */
   /**                              UTILITARIOS                                */
   /** ====================================================================== */
 

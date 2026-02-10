@@ -8,6 +8,9 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  BadRequestException,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,6 +19,9 @@ import {
   ApiParam,
   ApiQuery,
   ApiBearerAuth,
+  ApiBadRequestResponse,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { ArregloService } from './arreglo.service';
 import { CreateArregloDto } from './dto/create-arreglo.dto';
@@ -26,6 +32,8 @@ import { FindArreglosPublicDto } from './dto/find-arreglos-public.dto';
 import { ArregloPublicResponseDto } from './dto/arreglo-public-response.dto';
 import { Auth } from 'src/auth/decorators';
 import { ValidRoles } from 'src/auth/interfaces';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { CreateLoteArreglosDto } from './dto/create-lote-arreglos.dto';
 
 @ApiTags('Arreglos')
 @ApiBearerAuth('JWT-auth')
@@ -47,6 +55,68 @@ export class ArregloController {
   })
   create(@Body() createArregloDto: CreateArregloDto) {
     return this.arregloService.create(createArregloDto);
+  }
+
+  @Post('batch')
+  @Auth(ValidRoles.admin)
+  @UseInterceptors(
+    FilesInterceptor('images', 50, {
+      limits: { fileSize: Number(process.env.DO_SPACES_MAX_UPLOAD_BYTES ?? '5242880') },
+      fileFilter: (_req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+        if (allowed.includes(file.mimetype)) cb(null, true);
+        else cb(new BadRequestException(`Tipo de archivo no permitido: ${file.mimetype}`), false);
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'string',
+          description: 'JSON string con { items: CreateLoteArregloItemDto[] }',
+          example: '{"items":[{"idFormaArreglo":1,"nombre":"Ramo","precioUnitario":49.99,"media":{"isPrimary":true,"orden":0}}]}',
+        },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Archivos de imagen (uno por item, emparejados por índice)',
+        },
+      },
+      required: ['data', 'images'],
+    },
+  })
+  @ApiOperation({ summary: 'Crear arreglos por lote con imágenes (admin)' })
+  @ApiResponse({ status: 201, description: 'Lote creado exitosamente' })
+  @ApiBadRequestResponse({ description: 'Datos inválidos o desalineación de índices' })
+  async createBatch(
+    @UploadedFiles() files: { buffer: Buffer; mimetype: string; originalname: string }[],
+    @Body('data') data: string,
+  ) {
+    if (!data) throw new BadRequestException('El body debe incluir "data" (string JSON).');
+
+    let parsed: CreateLoteArreglosDto;
+    try {
+      parsed = JSON.parse(data);
+    } catch {
+      throw new BadRequestException('Formato JSON inválido en "data".');
+    }
+
+    if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+      throw new BadRequestException('El JSON debe contener "items" como array con al menos un elemento.');
+    }
+
+    if (!Array.isArray(files)) {
+      throw new BadRequestException('Se requieren archivos en el campo "images".');
+    }
+
+    if (files.length !== parsed.items.length) {
+      throw new BadRequestException(`El número de imágenes (${files.length}) debe coincidir con el número de items (${parsed.items.length}).`);
+    }
+
+    return this.arregloService.createBatch(parsed.items, files);
   }
 
   @Get()

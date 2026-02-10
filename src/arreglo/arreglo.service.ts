@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Arreglo } from './entities/arreglo.entity';
 import { CreateArregloDto } from './dto/create-arreglo.dto';
 import { UpdateArregloDto } from './dto/update-arreglo.dto';
@@ -11,6 +11,9 @@ import { FindArreglosDto } from './dto/find-arreglos.dto';
 import { FindArreglosPublicDto } from './dto/find-arreglos-public.dto';
 import { ArregloFlor } from 'src/arreglo-flor/entities/arreglo-flor.entity';
 import { ArregloPublicResponseDto } from './dto/arreglo-public-response.dto';
+import { ArregloMedia } from './entities/arreglo-media.entity';
+import { SpacesService } from 'src/common/storage/spaces.service';
+import { CreateLoteArregloItemDto } from './dto/create-lote-arreglos.dto';
 
 @Injectable()
 export class ArregloService {
@@ -21,26 +24,31 @@ export class ArregloService {
     private readonly formaArregloRepository: Repository<FormaArreglo>,
     @InjectRepository(ArregloFlor)
     private readonly arregloFlorRepository: Repository<ArregloFlor>,
+    @InjectRepository(ArregloMedia)
+    private readonly mediaRepository: Repository<ArregloMedia>,
+    private readonly spaces: SpacesService,
   ) {}
 
-  async create(createArregloDto: CreateArregloDto) {
+  async create(createArregloDto: CreateArregloDto, manager?: EntityManager) {
     try {
       const { idFormaArreglo, ...arregloData } = createArregloDto;
+      const formaRepo = manager ? manager.getRepository(FormaArreglo) : this.formaArregloRepository;
+      const arregloRepo = manager ? manager.getRepository(Arreglo) : this.arregloRepository;
 
       const formaArreglo = await findEntityOrFail(
-        this.formaArregloRepository,
+        formaRepo,
         { idFormaArreglo },
         'La forma de arreglo no fue encontrada o no existe',
       );
 
-      const newArreglo = this.arregloRepository.create({
+      const newArreglo = arregloRepo.create({
         ...arregloData,
         formaArreglo,
       });
 
-      await this.arregloRepository.save(newArreglo);
+      await arregloRepo.save(newArreglo);
 
-      return this.arregloRepository.findOne({
+      return arregloRepo.findOne({
         where: { idArreglo: newArreglo.idArreglo },
         relations: ['formaArreglo', 'media'],
         order: {
@@ -314,6 +322,97 @@ export class ArregloService {
       };
     } catch (error) {
       console.error('Error en getFiltrosDisponibles:', error);
+      throw error;
+    }
+  }
+
+  /** Crear arreglos por lote con index pairing y subida a Spaces */
+  async createBatch(
+    items: CreateLoteArregloItemDto[],
+    files: { buffer: Buffer; mimetype: string; originalname: string }[],
+  ) {
+    if (!Array.isArray(items) || !Array.isArray(files)) {
+      throw new BadRequestException('Items y archivos son requeridos.');
+    }
+    if (items.length !== files.length) {
+      throw new BadRequestException('El número de items debe coincidir con los archivos.');
+    }
+
+    const uploadedKeys: string[] = [];
+    try {
+      return await this.arregloRepository.manager.transaction(async (manager) => {
+        const arregloRepo = manager.getRepository(Arreglo);
+        const mediaRepo = manager.getRepository(ArregloMedia);
+
+        const results = await Promise.all(
+          items.map(async (item, idx) => {
+            const created = await this.create(item, manager);
+
+            const file = files[idx];
+            let publicUrl: string | undefined;
+            let objectKey: string | undefined;
+            let provider = 'spaces';
+
+            if (item.imageUrl) {
+              publicUrl = item.imageUrl;
+              objectKey = item.imageUrl;
+              provider = 'external';
+            } else {
+              const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+              if (!allowed.includes(file.mimetype)) {
+                throw new BadRequestException(`Tipo de archivo no permitido: ${file.mimetype}`);
+              }
+              const keyPrefix = `arreglos/${created.idArreglo}`;
+              const { objectKey: key, publicUrl: url } = await this.spaces.uploadObject({
+                buffer: file.buffer,
+                contentType: file.mimetype,
+                keyPrefix,
+                fileName: file.originalname,
+                acl: 'public-read',
+              });
+              publicUrl = url;
+              objectKey = key;
+              uploadedKeys.push(key);
+            }
+
+            const ordenBase = item.media?.orden ?? 0;
+            const isPrimary = item.media?.isPrimary ?? ordenBase === 0;
+
+            const media = mediaRepo.create({
+              idArreglo: created.idArreglo,
+              url: publicUrl!,
+              objectKey: objectKey!,
+              provider,
+              contentType: file.mimetype,
+              orden: ordenBase,
+              isPrimary,
+              altText: item.media?.altText,
+              activo: true,
+            });
+
+            const savedMedia = await mediaRepo.save(media);
+
+            if (isPrimary) {
+              await arregloRepo.update(created.idArreglo, { url: savedMedia.url });
+            }
+
+            const withMedia = await arregloRepo.findOne({
+              where: { idArreglo: created.idArreglo },
+              relations: ['formaArreglo', 'media'],
+              order: { media: { orden: 'ASC', idArregloMedia: 'ASC' } },
+            });
+            return withMedia!;
+          }),
+        );
+
+        return results;
+      });
+    } catch (error) {
+      for (const key of uploadedKeys) {
+        try {
+          await this.spaces.deleteObject(key);
+        } catch {/* ignore */}
+      }
       throw error;
     }
   }
