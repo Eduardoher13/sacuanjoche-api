@@ -148,7 +148,7 @@ export class OrdenTrabajoReport {
       },
       {
         text: valor ? valor.toFixed(2) : '',
-        fontSize: 10,
+        fontSize: 7,
         absolutePosition: positions.valor,
       },
       {
