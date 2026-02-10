@@ -140,8 +140,14 @@ async function bootstrap() {
     },
   });
 
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
+  // Health endpoint (no auth) for readiness probes
+  const http = app.getHttpAdapter().getInstance();
+  http.get('/healthz', (_req, res) => res.status(200).send('ok'));
+
+  // Bind host and port. Default to 8000 in production if PORT is undefined.
+  const portEnv = process.env.PORT;
+  const port = portEnv ? Number(portEnv) : process.env.STAGE === 'prod' ? 8000 : 3000;
+  await app.listen(port, '0.0.0.0');
   logger.log(`Aplicación corriendo en: http://localhost:${port}/api`);
 }
 bootstrap();
