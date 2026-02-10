@@ -100,7 +100,7 @@ export class OrdenTrabajoReport {
       enviarseA: { x: 110, y: 105 },
       // Solicitado por y Tel Oficina en la misma línea
       solicitadoPor: { x: 150 , y: 145 },
-      telOficina: { x: 270, y: 180 },
+      telOficina: { x: 245, y: 200 },
       // Arreglos florales más a la derecha
       arreglosStart: { x: 240, y: 260, gap: 20 },
       cintaTarjeta: { x: 160, y: 330 },
@@ -153,17 +153,17 @@ export class OrdenTrabajoReport {
       },
       {
         text: transporte ? transporte.toFixed(2) : '',
-        fontSize: 10,
+        fontSize: 7,
         absolutePosition: positions.transporte,
       },
       {
         text: numFactura,
-        fontSize: 10,
+        fontSize: 7,
         absolutePosition: positions.factura,
       },
       {
         text: fechaEntrega,
-        fontSize: 10,
+        fontSize: 7,
         absolutePosition: positions.fechaEntrega,
       },
     ];
@@ -174,7 +174,7 @@ export class OrdenTrabajoReport {
       pageMargins: [0, 0, 0, 0],
       defaultStyle: {
         font: 'Roboto',
-        fontSize: 10,
+        fontSize: 7,
         color: '#000000',
         lineHeight: 1.1,
       },
