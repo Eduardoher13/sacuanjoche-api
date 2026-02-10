@@ -42,6 +42,13 @@ DO_SPACES_MAX_UPLOAD_BYTES=5242880
       "descripcion": "Ideal para regalo",
       "precioUnitario": 49.99,
       "estado": "activo",
+      "flores": [
+        { "idFlor": 10, "cantidad": 12 },
+        { "idFlor": 5, "cantidad": 3 }
+      ],
+      "accesorios": [
+        { "idAccesorio": 2, "cantidad": 1 }
+      ],
       "imageUrl": "https://...opcional...",
       "media": { "altText": "Ramo clásico", "isPrimary": true, "orden": 0 }
     },
@@ -49,6 +56,8 @@ DO_SPACES_MAX_UPLOAD_BYTES=5242880
       "idFormaArreglo": 2,
       "nombre": "Centro de mesa",
       "precioUnitario": 59.90,
+      "flores": [ { "idFlor": 1, "cantidad": 5 } ],
+      "accesorios": [],
       "media": { "orden": 0 }
     }
   ]
@@ -56,7 +65,8 @@ DO_SPACES_MAX_UPLOAD_BYTES=5242880
 ```
 
 Notas:
-- Si `items[i].imageUrl` está presente, se usa esa URL y NO se sube `images[i]`.
+- **Importante**: `flores` y `accesorios` son listas opcionales en estructura pero fundamentales para la lógica de negocio y cálculo de costos. Se recomienda enviarlas siempre.
+- `items[i].imageUrl`: Si está presente, se usa esa URL y NO se sube `images[i]`.
 - `media.isPrimary`: marca portada y actualiza `arreglo.url`.
 - Límite de tamaño por archivo lee `DO_SPACES_MAX_UPLOAD_BYTES`.
 

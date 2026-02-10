@@ -10,6 +10,7 @@ import { handleDbException } from 'src/common/helpers/db-exception.helper';
 import { FindArreglosDto } from './dto/find-arreglos.dto';
 import { FindArreglosPublicDto } from './dto/find-arreglos-public.dto';
 import { ArregloFlor } from 'src/arreglo-flor/entities/arreglo-flor.entity';
+import { AccesoriosArreglo } from 'src/accesorios-arreglo/entities/accesorios-arreglo.entity';
 import { ArregloPublicResponseDto } from './dto/arreglo-public-response.dto';
 import { ArregloMedia } from './entities/arreglo-media.entity';
 import { SpacesService } from 'src/common/storage/spaces.service';
@@ -24,6 +25,8 @@ export class ArregloService {
     private readonly formaArregloRepository: Repository<FormaArreglo>,
     @InjectRepository(ArregloFlor)
     private readonly arregloFlorRepository: Repository<ArregloFlor>,
+    @InjectRepository(AccesoriosArreglo)
+    private readonly accesoriosArregloRepository: Repository<AccesoriosArreglo>,
     @InjectRepository(ArregloMedia)
     private readonly mediaRepository: Repository<ArregloMedia>,
     private readonly spaces: SpacesService,
@@ -31,9 +34,13 @@ export class ArregloService {
 
   async create(createArregloDto: CreateArregloDto, manager?: EntityManager) {
     try {
-      const { idFormaArreglo, ...arregloData } = createArregloDto;
+      const { idFormaArreglo, flores, accesorios, ...arregloData } = createArregloDto;
       const formaRepo = manager ? manager.getRepository(FormaArreglo) : this.formaArregloRepository;
       const arregloRepo = manager ? manager.getRepository(Arreglo) : this.arregloRepository;
+      const florRepo = manager ? manager.getRepository(ArregloFlor) : this.arregloFlorRepository;
+      const accesorioRepo = manager
+        ? manager.getRepository(AccesoriosArreglo)
+        : this.accesoriosArregloRepository;
 
       const formaArreglo = await findEntityOrFail(
         formaRepo,
@@ -46,7 +53,29 @@ export class ArregloService {
         formaArreglo,
       });
 
-      await arregloRepo.save(newArreglo);
+      const savedArreglo = await arregloRepo.save(newArreglo);
+
+      if (flores && flores.length > 0) {
+        const arregloFlores = flores.map((f) =>
+          florRepo.create({
+            idArreglo: savedArreglo.idArreglo,
+            idFlor: f.idFlor,
+            cantidad: f.cantidad,
+          }),
+        );
+        await florRepo.save(arregloFlores);
+      }
+
+      if (accesorios && accesorios.length > 0) {
+        const arregloAccesorios = accesorios.map((a) =>
+          accesorioRepo.create({
+            idArreglo: savedArreglo.idArreglo,
+            idAccesorio: a.idAccesorio,
+            cantidad: a.cantidad,
+          }),
+        );
+        await accesorioRepo.save(arregloAccesorios);
+      }
 
       return arregloRepo.findOne({
         where: { idArreglo: newArreglo.idArreglo },
