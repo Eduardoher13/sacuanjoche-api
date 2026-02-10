@@ -91,16 +91,25 @@ export class OrdenTrabajoReport {
 
     const mensaje = pedidoCompleto.mensajePedido || '';
 
+    // Conversión de cm a puntos para pdfmake
+    const CM = 28.3464567;
+    // Posiciones para las medidas exactas solicitadas (13.7cm x 21.4cm), más a la izquierda y arriba
     const positions = {
-      enviarseA: { x: 135, y: 205 },
-      solicitadoPor: { x: 150, y: 300 },
-      telOficina: { x: 420, y: 340 },
-      arreglosStart: { x: 220, y: 380, gap: 20 },
-      cintaTarjeta: { x: 190, y: 560 },
-      valor: { x: 140, y: 610 },
-      transporte: { x: 375, y: 610 },
-      factura: { x: 490, y: 610 },
-      fechaEntrega: { x: 160, y: 740 },
+      // Enviarse a: primera línea (más arriba), un poco a la derecha
+      enviarseA: { x: 150, y: 125 },
+      // Solicitado por y Tel Oficina en la misma línea
+      solicitadoPor: { x: 150 , y: 155 },
+      telOficina: { x: 270, y: 180 },
+      // Arreglos florales más a la derecha
+      arreglosStart: { x: 240, y: 260, gap: 20 },
+      cintaTarjeta: { x: 160, y: 330 },
+      // Valor: más a la izquierda, manteniendo la altura relativa
+      valor: { x: 130, y: 290 },
+      transporte: { x: 230, y: 420 },
+      // Factura: abajo a la derecha, un poco más arriba que la fecha
+      factura: { x: 260, y: 290},
+      // Fecha: abajo a la izquierda
+      fechaEntrega: { x: 100, y: 400 },
     };
 
     const content: any[] = [
@@ -157,7 +166,7 @@ export class OrdenTrabajoReport {
     ];
 
     const docDefinition: TDocumentDefinitions = {
-      pageSize: 'LETTER',
+      pageSize: { width: Math.round(13.7 * CM), height: Math.round(21.4 * CM) },
       pageOrientation: 'portrait',
       pageMargins: [0, 0, 0, 0],
       defaultStyle: {
