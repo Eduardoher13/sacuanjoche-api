@@ -72,7 +72,6 @@ export class OrdenTrabajoReport {
     });
 
     // Datos financieros (solo los necesarios)
-    const valor = Number(pedidoCompleto.totalPedido || 0);
     const transporte = pedidoCompleto.envio?.costoEnvio
       ? Number(pedidoCompleto.envio.costoEnvio)
       : 0;
@@ -112,9 +111,6 @@ export class OrdenTrabajoReport {
 
       // Mensaje: Debajo de los arreglos
       cintaTarjeta: { x: 130, y: 350 },
-
-      // Valor: Izquierda abajo
-      valor: { x: 90, y: 450 }, // Ajustado para estar alineado visualmente
 
       // Transporte: (No visible claramente en imagen, lo mantengo oculto o discreto)
       transporte: { x: 350, y: 10 },
@@ -163,11 +159,6 @@ export class OrdenTrabajoReport {
         width: 200,
         alignment: 'center',
         absolutePosition: positions.cintaTarjeta,
-      },
-      {
-        text: valor ? valor.toFixed(2) : '',
-        fontSize: 12,
-        absolutePosition: positions.valor,
       },
       {
         text: transporte ? transporte.toFixed(2) : '',
