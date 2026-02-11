@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Arreglo } from './entities/arreglo.entity';
@@ -15,6 +19,11 @@ import { ArregloPublicResponseDto } from './dto/arreglo-public-response.dto';
 import { ArregloMedia } from './entities/arreglo-media.entity';
 import { SpacesService } from 'src/common/storage/spaces.service';
 import { CreateLoteArregloItemDto } from './dto/create-lote-arreglos.dto';
+import { CreateArregloWithMediaDto } from './dto/create-arreglo-batch.dto';
+import { extractObjectKey } from 'src/common/helpers/storage.helper';
+import { Flor } from 'src/flor/entities/flor.entity';
+import { Accesorio } from 'src/accesorio/entities/accesorio.entity';
+import { In } from 'typeorm';
 
 @Injectable()
 export class ArregloService {
@@ -29,15 +38,26 @@ export class ArregloService {
     private readonly accesoriosArregloRepository: Repository<AccesoriosArreglo>,
     @InjectRepository(ArregloMedia)
     private readonly mediaRepository: Repository<ArregloMedia>,
+    @InjectRepository(Flor)
+    private readonly florRepository: Repository<Flor>,
+    @InjectRepository(Accesorio)
+    private readonly accesorioRepository: Repository<Accesorio>,
     private readonly spaces: SpacesService,
   ) {}
 
   async create(createArregloDto: CreateArregloDto, manager?: EntityManager) {
     try {
-      const { idFormaArreglo, flores, accesorios, ...arregloData } = createArregloDto;
-      const formaRepo = manager ? manager.getRepository(FormaArreglo) : this.formaArregloRepository;
-      const arregloRepo = manager ? manager.getRepository(Arreglo) : this.arregloRepository;
-      const florRepo = manager ? manager.getRepository(ArregloFlor) : this.arregloFlorRepository;
+      const { idFormaArreglo, flores, accesorios, ...arregloData } =
+        createArregloDto;
+      const formaRepo = manager
+        ? manager.getRepository(FormaArreglo)
+        : this.formaArregloRepository;
+      const arregloRepo = manager
+        ? manager.getRepository(Arreglo)
+        : this.arregloRepository;
+      const florRepo = manager
+        ? manager.getRepository(ArregloFlor)
+        : this.arregloFlorRepository;
       const accesorioRepo = manager
         ? manager.getRepository(AccesoriosArreglo)
         : this.accesoriosArregloRepository;
@@ -324,7 +344,10 @@ export class ArregloService {
       ]);
 
       // Obtener flores únicas y ordenadas
-      const floresMap = new Map<number, { id: number; nombre: string; color: string }>();
+      const floresMap = new Map<
+        number,
+        { id: number; nombre: string; color: string }
+      >();
       arreglosFlor.forEach((af) => {
         if (af.flor && !floresMap.has(af.flor.idFlor)) {
           floresMap.set(af.flor.idFlor, {
@@ -355,94 +378,117 @@ export class ArregloService {
     }
   }
 
-  /** Crear arreglos por lote con index pairing y subida a Spaces */
-  async createBatch(
-    items: CreateLoteArregloItemDto[],
-    files: { buffer: Buffer; mimetype: string; originalname: string }[],
-  ) {
-    if (!Array.isArray(items) || !Array.isArray(files)) {
-      throw new BadRequestException('Items y archivos son requeridos.');
-    }
-    if (items.length !== files.length) {
-      throw new BadRequestException('El número de items debe coincidir con los archivos.');
-    }
+  /** Crear arreglos por lote (JSON) incluyendo flores, accesorios e imágenes */
+  async createBatch(items: CreateArregloWithMediaDto[]) {
+    // 1. Pre-Validación Masiva de IDs (Flores y Accesorios)
+    const florIds = new Set<number>();
+    const accesorioIds = new Set<number>();
 
-    const uploadedKeys: string[] = [];
-    try {
-      return await this.arregloRepository.manager.transaction(async (manager) => {
-        const arregloRepo = manager.getRepository(Arreglo);
-        const mediaRepo = manager.getRepository(ArregloMedia);
+    items.forEach((item) => {
+      item.flores?.forEach((f) => florIds.add(f.idFlor));
+      item.accesorios?.forEach((a) => accesorioIds.add(a.idAccesorio));
+    });
 
-        const results = await Promise.all(
-          items.map(async (item, idx) => {
-            const created = await this.create(item, manager);
-
-            const file = files[idx];
-            let publicUrl: string | undefined;
-            let objectKey: string | undefined;
-            let provider = 'spaces';
-
-            if (item.imageUrl) {
-              publicUrl = item.imageUrl;
-              objectKey = item.imageUrl;
-              provider = 'external';
-            } else {
-              const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
-              if (!allowed.includes(file.mimetype)) {
-                throw new BadRequestException(`Tipo de archivo no permitido: ${file.mimetype}`);
-              }
-              const keyPrefix = `arreglos/${created.idArreglo}`;
-              const { objectKey: key, publicUrl: url } = await this.spaces.uploadObject({
-                buffer: file.buffer,
-                contentType: file.mimetype,
-                keyPrefix,
-                fileName: file.originalname,
-                acl: 'public-read',
-              });
-              publicUrl = url;
-              objectKey = key;
-              uploadedKeys.push(key);
-            }
-
-            const ordenBase = item.media?.orden ?? 0;
-            const isPrimary = item.media?.isPrimary ?? ordenBase === 0;
-
-            const media = mediaRepo.create({
-              idArreglo: created.idArreglo,
-              url: publicUrl!,
-              objectKey: objectKey!,
-              provider,
-              contentType: file.mimetype,
-              orden: ordenBase,
-              isPrimary,
-              altText: item.media?.altText,
-              activo: true,
-            });
-
-            const savedMedia = await mediaRepo.save(media);
-
-            if (isPrimary) {
-              await arregloRepo.update(created.idArreglo, { url: savedMedia.url });
-            }
-
-            const withMedia = await arregloRepo.findOne({
-              where: { idArreglo: created.idArreglo },
-              relations: ['formaArreglo', 'media'],
-              order: { media: { orden: 'ASC', idArregloMedia: 'ASC' } },
-            });
-            return withMedia!;
-          }),
-        );
-
-        return results;
+    // Validar Flores
+    if (florIds.size > 0) {
+      const dbFlores = await this.florRepository.find({
+        where: { idFlor: In([...florIds]) },
+        select: ['idFlor'],
       });
-    } catch (error) {
-      for (const key of uploadedKeys) {
-        try {
-          await this.spaces.deleteObject(key);
-        } catch {/* ignore */}
+      const foundFlorIds = new Set(dbFlores.map((f) => f.idFlor));
+      const missingFlores = [...florIds].filter((id) => !foundFlorIds.has(id));
+
+      if (missingFlores.length > 0) {
+        throw new BadRequestException(
+          `Los siguientes IDs de flores no existen: [${missingFlores.join(', ')}]`,
+        );
       }
-      throw error;
     }
+
+    // Validar Accesorios
+    if (accesorioIds.size > 0) {
+      const dbAccesorios = await this.accesorioRepository.find({
+        where: { idAccesorio: In([...accesorioIds]) },
+        select: ['idAccesorio'],
+      });
+      const foundAccesorioIds = new Set(dbAccesorios.map((a) => a.idAccesorio));
+      const missingAccesorios = [...accesorioIds].filter(
+        (id) => !foundAccesorioIds.has(id),
+      );
+
+      if (missingAccesorios.length > 0) {
+        throw new BadRequestException(
+          `Los siguientes IDs de accesorios no existen: [${missingAccesorios.join(
+            ', ',
+          )}]`,
+        );
+      }
+    }
+
+    // 2. Transacción TypeORM para asegurar atomicidad del lote completo
+    return await this.arregloRepository.manager.transaction(async (manager) => {
+      const arregloRepo = manager.getRepository(Arreglo);
+      const mediaRepo = manager.getRepository(ArregloMedia);
+
+      // Usamos Promise.all para procesar paralelamente, pero cualquier error abortará la transacción
+      const results = await Promise.all(
+        items.map(async (item) => {
+          // Extraemos 'imagenes' para procesarlas separadamente
+          // 'flores' y 'accesorios' se mantienen en createDto y son procesados por this.create()
+          const { imagenes, ...createDto } = item;
+
+          // 1. Crear Arreglo y relaciones (Flores, Accesorios)
+          const created = await this.create(createDto, manager);
+
+          // 2. Procesar Imágenes (ArregloMedia)
+          if (imagenes && imagenes.length > 0) {
+            let hasPrimary = false;
+
+            for (const imgDto of imagenes) {
+              const objectKey = extractObjectKey(imgDto.url);
+
+              const media = mediaRepo.create({
+                idArreglo: created.idArreglo,
+                url: imgDto.url,
+                objectKey: objectKey,
+                provider: 'external',
+                contentType: 'application/octet-stream', // Desconocido al venir via JSON
+                orden: imgDto.orden ?? 0,
+                isPrimary: imgDto.isPrimary ?? false,
+                altText: imgDto.altText,
+                activo: true,
+              });
+
+              const savedMedia = await mediaRepo.save(media);
+
+              // 3. Actualizar imagen principal en Arreglo si corresponde
+              if (savedMedia.isPrimary) {
+                // Si hay múltiples marcadas como primary/true, la última ganará o podríamos forzar solo la primera.
+                // Aquí actualizamos cada vez que encontramos una primary.
+                await arregloRepo.update(created.idArreglo, {
+                  url: savedMedia.url,
+                });
+                hasPrimary = true;
+              }
+            }
+          }
+
+          // Retornar entidad completa con relaciones actualizadas
+          const withRelations = await arregloRepo.findOne({
+            where: { idArreglo: created.idArreglo },
+            relations: [
+              'formaArreglo',
+              'media',
+              // 'arreglosFlor', // Si existieran en la entidad y se quisieran devolver
+              // 'accesoriosArreglo'
+            ],
+            order: { media: { orden: 'ASC', idArregloMedia: 'ASC' } },
+          });
+          return withRelations!;
+        }),
+      );
+
+      return results;
+    });
   }
 }

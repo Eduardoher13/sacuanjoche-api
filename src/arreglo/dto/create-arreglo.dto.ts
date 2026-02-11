@@ -65,23 +65,31 @@ export class CreateArregloDto {
   @IsString()
   @AllowedCharacters()
   @NoSqlInjection()
-  @NoRandomString()
-  @NoExcessiveRepetition(4)
+  /* @NoRandomString() // Deshabilitado temporalmente para evitar falsos positivos en descripciones largas */
+  /* @NoExcessiveRepetition(4) */
+  descripcion?: string;
 
-  @ApiProperty({ type: [ArregloFlorItemDto], description: 'Lista de flores', required: false })
+  @ApiProperty({
+    type: [ArregloFlorItemDto],
+    description: 'Lista de flores',
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ArregloFlorItemDto)
   flores?: ArregloFlorItemDto[];
 
-  @ApiProperty({ type: [ArregloAccesorioItemDto], description: 'Lista de accesorios', required: false })
+  @ApiProperty({
+    type: [ArregloAccesorioItemDto],
+    description: 'Lista de accesorios',
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ArregloAccesorioItemDto)
   accesorios?: ArregloAccesorioItemDto[];
-  descripcion?: string;
 
   @ApiProperty({
     description: 'Precio unitario del arreglo',
@@ -90,7 +98,6 @@ export class CreateArregloDto {
   @IsNumber()
   precioUnitario: number;
 
- 
   @ApiProperty({
     description: 'Estado del arreglo',
     example: ArregloEstado.ACTIVO,
