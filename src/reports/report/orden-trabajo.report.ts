@@ -143,27 +143,27 @@ export class OrdenTrabajoReport {
       ),
       {
         text: mensaje,
-        fontSize: 7,
+        fontSize: 10,
         absolutePosition: positions.cintaTarjeta,
       },
       {
         text: valor ? valor.toFixed(2) : '',
-        fontSize: 7,
+        fontSize: 10,
         absolutePosition: positions.valor,
       },
       {
         text: transporte ? transporte.toFixed(2) : '',
-        fontSize: 7,
+        fontSize: 10,
         absolutePosition: positions.transporte,
       },
       {
         text: numFactura,
-        fontSize: 7,
+        fontSize: 10,
         absolutePosition: positions.factura,
       },
       {
         text: fechaEntrega,
-        fontSize: 7,
+        fontSize: 10,
         absolutePosition: positions.fechaEntrega,
       },
     ];
@@ -174,7 +174,7 @@ export class OrdenTrabajoReport {
       pageMargins: [0, 0, 0, 0],
       defaultStyle: {
         font: 'Roboto',
-        fontSize: 7,
+        fontSize: 10,
         color: '#000000',
         lineHeight: 1.1,
       },
