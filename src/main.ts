@@ -34,7 +34,7 @@ async function bootstrap() {
     'http://localhost:8000', // Para pruebas locales con Postman o frontend local
     'http://localhost:5173',
     'https://sacuanjoche.netlify.app',
-    'https://sacuanjocheback-24676.ondigitalocean.app', 
+    'https://sacuanjocheback-24676.ondigitalocean.app',
     'http://127.0.0.1:3000',
 
     // Agregar aquí otros orígenes permitidos en producción
@@ -143,10 +143,17 @@ async function bootstrap() {
   // Health endpoint (no auth) for readiness probes
   const http = app.getHttpAdapter().getInstance();
   http.get('/healthz', (_req, res) => res.status(200).send('ok'));
+  http.get('/', (_req, res) =>
+    res.status(200).send('Sacuanjoche API is running'),
+  );
 
   // Bind host and port. Default to 8000 in production if PORT is undefined.
   const portEnv = process.env.PORT;
-  const port = portEnv ? Number(portEnv) : process.env.STAGE === 'prod' ? 8000 : 3000;
+  const port = portEnv
+    ? Number(portEnv)
+    : process.env.STAGE === 'prod'
+      ? 8000
+      : 3000;
   await app.listen(port, '0.0.0.0');
   logger.log(`Aplicación corriendo en: http://localhost:${port}/api`);
 }
