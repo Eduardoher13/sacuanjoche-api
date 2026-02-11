@@ -73,8 +73,8 @@ export class OrdenTrabajoReport {
 
     // Datos financieros (solo los necesarios)
     const valor = Number(pedidoCompleto.totalPedido || 0);
-    const transporte = pedidoCompleto.envio?.costoEnvio 
-      ? Number(pedidoCompleto.envio.costoEnvio) 
+    const transporte = pedidoCompleto.envio?.costoEnvio
+      ? Number(pedidoCompleto.envio.costoEnvio)
       : 0;
     const numFactura = pedidoCompleto.factura?.numFactura || '';
 
@@ -93,48 +93,64 @@ export class OrdenTrabajoReport {
 
     // Conversión de cm a puntos para pdfmake
     const CM = 28.3464567;
-    const PAGE_WIDTH = Math.round(13.7 * CM);
-    // Posiciones para las medidas exactas solicitadas (13.7cm x 21.4cm), más a la izquierda y arriba
+    const PAGE_WIDTH = Math.round(13.9 * CM); // 394 pts
+    const PAGE_HEIGHT = Math.round(21.2 * CM); // 601 pts
+
+    // Posiciones estimadas basadas en la imagen proporcionada
     const positions = {
-      // Enviarse a: primera línea (más arriba), un poco a la derecha
-      enviarseA: { x: 110, y: 105 },
-      // Solicitado por y Tel Oficina en la misma línea
-      solicitadoPor: { x: 150 , y: 145 },
-      telOficina: { x: 245, y: 200 },
-      // Arreglos florales más a la derecha
-      arreglosStart: { x: 240, y: 260, gap: 20 },
-      cintaTarjeta: { x: 160, y: 330 },
-      // Valor: más a la izquierda, manteniendo la altura relativa
-      valor: { x: 110, y: 320 },
-      transporte: { x: 230, y: 3 },
-      // Factura: abajo a la derecha, un poco más arriba que la fecha
-      factura: { x: 260, y: 315},
-      // Fecha: abajo a la izquierda
-      fechaEntrega: { x: 135, y: 400 },
+      // Dirección: Centrada arriba (aprox 1/5 de la página)
+      enviarseA: { x: 90, y: 145 },
+
+      // Cliente: Debajo de la dirección, centrado
+      solicitadoPor: { x: 10, y: 209 },
+
+      // Teléfono: A la derecha, debajo del nombre
+      telOficina: { x: 280, y: 270 },
+
+      // Arreglos florales: Centro de la página
+      arreglosStart: { x: 180, y: 330, gap: 20 },
+
+      // Mensaje: Debajo de los arreglos
+      cintaTarjeta: { x: 130, y: 350 },
+
+      // Valor: Izquierda abajo
+      valor: { x: 90, y: 450 }, // Ajustado para estar alineado visualmente
+
+      // Transporte: (No visible claramente en imagen, lo mantengo oculto o discreto)
+      transporte: { x: 350, y: 10 },
+
+      // Factura: Derecha, altura similar al valor
+      factura: { x: 296, y: 450 },
+
+      // Fecha: Abajo del todo
+      fechaEntrega: { x: 140, y: 560 },
     };
 
     const content: any[] = [
       {
         text: direccionEntrega,
-        fontSize: 10,
-        // Si el texto es largo, se partirá en varias líneas dentro de este ancho
-        width: Math.max(120, PAGE_WIDTH - positions.enviarseA.x - 20),
+        fontSize: 12,
+        // Ancho suficiente para que se centre visualmente si es largo
+        width: 250,
         absolutePosition: positions.enviarseA,
+        alignment: 'center',
       },
       {
         text: clienteNombre,
-        fontSize: 10,
+        fontSize: 12,
         absolutePosition: positions.solicitadoPor,
+        width: 250,
+        alignment: 'center',
       },
       {
         text: telefonoOficina,
-        fontSize: 10,
+        fontSize: 12,
         absolutePosition: positions.telOficina,
       },
       ...Array.from({ length: Math.max(4, arreglosFlorales.length) }).map(
         (_, i) => ({
           text: arreglosFlorales[i] || '',
-          fontSize: 10,
+          fontSize: 12,
           absolutePosition: {
             x: positions.arreglosStart.x,
             y: positions.arreglosStart.y + positions.arreglosStart.gap * i,
@@ -143,38 +159,40 @@ export class OrdenTrabajoReport {
       ),
       {
         text: mensaje,
-        fontSize: 10,
+        fontSize: 12,
+        width: 200,
+        alignment: 'center',
         absolutePosition: positions.cintaTarjeta,
       },
       {
         text: valor ? valor.toFixed(2) : '',
-        fontSize: 10,
+        fontSize: 12,
         absolutePosition: positions.valor,
       },
       {
         text: transporte ? transporte.toFixed(2) : '',
-        fontSize: 10,
+        fontSize: 10, // Pequeño
         absolutePosition: positions.transporte,
       },
       {
         text: numFactura,
-        fontSize: 10,
+        fontSize: 12,
         absolutePosition: positions.factura,
       },
       {
         text: fechaEntrega,
-        fontSize: 10,
+        fontSize: 12,
         absolutePosition: positions.fechaEntrega,
       },
     ];
 
     const docDefinition: TDocumentDefinitions = {
-      pageSize: { width: Math.round(13.7 * CM), height: Math.round(21.4 * CM) },
+      pageSize: { width: PAGE_WIDTH, height: PAGE_HEIGHT },
       pageOrientation: 'portrait',
-      pageMargins: [0, 0, 0, 0],
+      pageMargins: [10, 10, 10, 10],
       defaultStyle: {
         font: 'Roboto',
-        fontSize: 10,
+        fontSize: 14,
         color: '#000000',
         lineHeight: 1.1,
       },
@@ -184,4 +202,3 @@ export class OrdenTrabajoReport {
     return this.printerService.createPdf(docDefinition);
   }
 }
-
