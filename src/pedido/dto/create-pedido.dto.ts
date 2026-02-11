@@ -1,4 +1,14 @@
-import { IsNotEmpty, IsNumber, IsString, IsDecimal, Min, IsOptional, IsEnum, IsDateString, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsDecimal,
+  Min,
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  MaxLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { PedidoCanal } from '../../common/enums';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
@@ -9,7 +19,8 @@ import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
 
 export class CreatePedidoDto {
   @ApiProperty({
-    description: 'Canal de venta: "web" (landing page) o "interno" (tienda física). Por defecto: "web"',
+    description:
+      'Canal de venta: "web" (landing page) o "interno" (tienda física). Por defecto: "web"',
     example: PedidoCanal.WEB,
     enum: PedidoCanal,
     default: PedidoCanal.WEB,
@@ -20,7 +31,8 @@ export class CreatePedidoDto {
   canal?: PedidoCanal;
 
   @ApiProperty({
-    description: 'ID del pago completado (requerido para canal "web", opcional para "interno")',
+    description:
+      'ID del pago completado (requerido para canal "web", opcional para "interno")',
     example: 1,
     required: false,
   })
@@ -78,13 +90,20 @@ export class CreatePedidoDto {
   // @Min(0, { message: 'El total de productos debe ser mayor o igual a 0' })
   // totalProductos: number;
 
-    @ApiProperty({
-    description: 'Fecha estimada de entrega (formato: YYYY-MM-DD o ISO con hora)',
+  @ApiProperty({
+    description:
+      'Fecha estimada de entrega (formato: YYYY-MM-DD o ISO con hora)',
     example: '2024-12-25T14:30:00.000Z',
     required: false,
   })
   @IsOptional()
-  @IsDateString({}, { message: 'La fecha de entrega estimada debe ser una fecha válida (formato ISO 8601)' })
+  @IsDateString(
+    {},
+    {
+      message:
+        'La fecha de entrega estimada debe ser una fecha válida (formato ISO 8601)',
+    },
+  )
   fechaEntregaEstimada?: string;
 
   @ApiProperty({
@@ -100,15 +119,18 @@ export class CreatePedidoDto {
   direccionTxt: string;
 
   @ApiProperty({
-    description: 'Mensaje/carta para el arreglo (obligatorio, máx 256 caracteres)',
+    description: 'Mensaje/carta para el arreglo (opcional, máx 256 caracteres)',
     example: 'Feliz cumpleaños, con mucho cariño. Te queremos.',
     maxLength: 256,
+    required: false,
   })
-  @IsNotEmpty({ message: 'El mensaje del pedido es requerido' })
+  @IsOptional()
   @IsString({ message: 'El mensaje del pedido debe ser un texto' })
-  @MaxLength(256, { message: 'El mensaje del pedido no puede exceder 256 caracteres' })
+  @MaxLength(256, {
+    message: 'El mensaje del pedido no puede exceder 256 caracteres',
+  })
   @NoExcessiveRepetition(6)
-  mensajePedido: string;
+  mensajePedido?: string;
 
   // @ApiProperty({
   //   description: 'Costo de envío del pedido',
