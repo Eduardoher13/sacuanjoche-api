@@ -72,7 +72,7 @@ export class OrdenTrabajoReport {
     // Arreglos florales
     const detalles = pedidoCompleto.detallesPedido || [];
     const arreglosFlorales = detalles.map((detalle) => {
-      const nombreArreglo = detalle.arreglo?.nombre || 'Arreglo';
+      const nombreArreglo = detalle.arreglo ? `${detalle.arreglo.nombre} ${detalle.arreglo.descripcion}`: '';
       const cantidad = detalle.cantidad;
       return `${cantidad}x ${nombreArreglo}`;
     });
@@ -111,7 +111,7 @@ export class OrdenTrabajoReport {
       solicitadoPor: { x: 130 , y: 145 },
       telOficina: { x: 245, y: 193 },
       // Arreglos florales más a la derecha
-      arreglosStart: { x: 200, y: 260, gap: 20 },
+      arreglosStart: { x: 130, y: 220, gap: 20 },
       cintaTarjeta: { x: 160, y: 330 },
       // Valor: más a la izquierda, manteniendo la altura relativa
       valor: { x: 110, y: 320 },
