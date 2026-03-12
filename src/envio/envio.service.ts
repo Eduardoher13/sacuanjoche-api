@@ -14,7 +14,7 @@ import { handleDbException } from 'src/common/helpers/db-exception.helper';
 import { findEntityOrFail } from 'src/common/helpers/find-entity.helper';
 import { FindEnviosDto } from './dto/find-envios.dto';
 import { ConfigService } from '@nestjs/config';
-import { MapboxService } from 'src/common/mapbox/mapbox.service';
+import { GoogleMapsService } from 'src/common/google-maps/google-maps.service';
 
 @Injectable()
 export class EnvioService {
@@ -26,7 +26,7 @@ export class EnvioService {
     @InjectRepository(Empleado)
     private readonly empleadoRepository: Repository<Empleado>,
     private readonly configService: ConfigService,
-    private readonly mapboxService: MapboxService,
+    private readonly googleMapsService: GoogleMapsService,
   ) {}
 
   async create(createEnvioDto: CreateEnvioDto) {
@@ -231,7 +231,7 @@ export class EnvioService {
     envio.destinoLat = destination.lat;
     envio.destinoLng = destination.lng;
 
-    const metrics = await this.mapboxService.getDistanceBetween(
+    const metrics = await this.googleMapsService.getDistanceBetween(
       origin,
       destination,
       profile,

@@ -69,8 +69,8 @@ export class ForwardGeocodeQueryDto {
   @ApiProperty({
     required: false,
     description:
-      'Tipos de lugar admitidos por Mapbox separados por coma (ej. poi,address).',
-    example: 'poi,address',
+      'Tipos de resultado compatibles con Google Maps separados por coma (ej. street_address,point_of_interest).',
+    example: 'street_address,point_of_interest',
   })
   @IsOptional()
   @IsString()
@@ -81,7 +81,7 @@ export class ForwardGeocodeQueryDto {
   @ApiProperty({
     required: false,
     description:
-      'Bounding box personalizada en formato minLng,minLat,maxLng,maxLat. Enviar vacío para deshabilitar la restricción.',
+      'Bounding box personalizada en formato minLng,minLat,maxLng,maxLat. Enviar vacío para deshabilitar el sesgo.',
     example: '-86.40,12.03,-86.10,12.20',
   })
   @IsOptional()
@@ -112,7 +112,8 @@ export class ForwardGeocodeQueryDto {
 
   @ApiProperty({
     required: false,
-    description: 'Forzar coincidencias aproximadas desde el primer intento.',
+    description:
+      'Bandera conservada por compatibilidad; Google Geocoding no expone un fuzzy match configurable.',
     example: false,
   })
   @IsOptional()
@@ -122,7 +123,8 @@ export class ForwardGeocodeQueryDto {
 
   @ApiProperty({
     required: false,
-    description: 'Controlar el comportamiento de autocompletado de Mapbox.',
+    description:
+      'Bandera conservada por compatibilidad; Google Geocoding no expone autocomplete en este endpoint.',
     example: true,
   })
   @IsOptional()

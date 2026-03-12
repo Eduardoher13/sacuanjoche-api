@@ -1,20 +1,30 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { ForwardGeocodeQueryDto } from './dto/forward-geocode-query.dto';
-import { MapboxService } from './mapbox.service';
-import { ForwardGeocodeResponse } from './mapbox.interfaces';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Auth } from 'src/auth/decorators';
 import { ValidRoles } from 'src/auth/interfaces';
+import { ForwardGeocodeQueryDto } from './dto/forward-geocode-query.dto';
+import { GoogleMapsService } from './google-maps.service';
+import { ForwardGeocodeResponse } from './google-maps.interfaces';
 
-@ApiTags('Mapbox')
+@ApiTags('Google Maps')
 @ApiBearerAuth('JWT-auth')
-@Controller('mapbox')
-export class MapboxController {
-  constructor(private readonly mapboxService: MapboxService) {}
+@Controller('google-maps')
+export class GoogleMapsController {
+  constructor(private readonly googleMapsService: GoogleMapsService) {}
 
   @Get('geocode')
-  @Auth(ValidRoles.admin, ValidRoles.vendedor, ValidRoles.conductor, ValidRoles.cliente)
-  @ApiOperation({ summary: 'Buscar direcciones usando Mapbox Geocoding.' })
+  @Auth(
+    ValidRoles.admin,
+    ValidRoles.vendedor,
+    ValidRoles.conductor,
+    ValidRoles.cliente,
+  )
+  @ApiOperation({ summary: 'Buscar direcciones usando Google Maps Geocoding.' })
   @ApiResponse({
     status: 200,
     description:
@@ -26,7 +36,7 @@ export class MapboxController {
           type: 'object',
           nullable: true,
           properties: {
-            id: { type: 'string', example: 'poi.123' },
+            id: { type: 'string', example: 'ChIJ1234567890' },
             label: {
               type: 'string',
               example: 'Centro Comercial Managua, Managua, Nicaragua',
@@ -39,7 +49,7 @@ export class MapboxController {
             neighborhood: { type: 'string', example: 'Roberto Huembes' },
             street: { type: 'string', example: 'Pista Suburbana' },
             postalCode: { type: 'string', example: '14033' },
-            accuracy: { type: 'string', example: 'point' },
+            accuracy: { type: 'string', example: 'ROOFTOP' },
           },
         },
         results: {
@@ -47,7 +57,7 @@ export class MapboxController {
           items: {
             type: 'object',
             properties: {
-              id: { type: 'string', example: 'poi.456' },
+              id: { type: 'string', example: 'ChIJabcdefghijk' },
               label: {
                 type: 'string',
                 example: 'Iglesia La Merced, Granada, Nicaragua',
@@ -60,7 +70,7 @@ export class MapboxController {
               neighborhood: { type: 'string', example: 'Centro Histórico' },
               street: { type: 'string', example: 'Calle Real' },
               postalCode: { type: 'string', example: '43000' },
-              accuracy: { type: 'string', example: 'point' },
+              accuracy: { type: 'string', example: 'GEOMETRIC_CENTER' },
             },
           },
         },
@@ -90,7 +100,7 @@ export class MapboxController {
           ? null
           : queryDto.bbox;
 
-    return this.mapboxService.forwardGeocode(queryDto.query, {
+    return this.googleMapsService.forwardGeocode(queryDto.query, {
       limit: queryDto.limit,
       proximity,
       language: queryDto.language,

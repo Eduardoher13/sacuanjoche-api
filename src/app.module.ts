@@ -31,7 +31,7 @@ import { PagoModule } from './pago/pago.module';
 import { PedidoModule } from './pedido/pedido.module';
 import { PedidoHistorialModule } from './pedido-historial/pedido-historial.module';
 import { RutaModule } from './ruta/ruta.module';
-import { MapboxModule } from './common/mapbox/mapbox.module';
+import { GoogleMapsModule } from './common/google-maps/google-maps.module';
 import { PrinterModule } from './printer/printer.module';
 import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -108,7 +108,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     PedidoModule,
     PedidoHistorialModule,
     RutaModule,
-    MapboxModule,
+    GoogleMapsModule,
     PrinterModule,
     ReportsModule,
     NotificationsModule,

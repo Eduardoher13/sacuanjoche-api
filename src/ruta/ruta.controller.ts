@@ -31,7 +31,7 @@ export class RutaController {
 
   @Post()
   @Auth(ValidRoles.admin, ValidRoles.vendedor)
-  @ApiOperation({ summary: 'Generar una ruta optimizada con Mapbox' })
+  @ApiOperation({ summary: 'Generar una ruta optimizada con Google Maps' })
   @ApiBody({
     description:
       'Lista de pedidos que se optimizarán junto al empleado y parámetros opcionales.',
@@ -67,7 +67,7 @@ export class RutaController {
           nullable: true,
           example: 'driving',
           description:
-            'Perfil de viaje Mapbox (driving, driving-traffic, walking, cycling).',
+            'Perfil de viaje Google Maps (driving, driving-traffic, walking, bicycling, transit).',
         },
         origenLat: {
           type: 'number',

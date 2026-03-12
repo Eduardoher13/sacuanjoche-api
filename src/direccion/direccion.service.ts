@@ -10,14 +10,14 @@ import { CreateDireccionDto } from './dto/create-direccion.dto';
 import { UpdateDireccionDto } from './dto/update-direccion.dto';
 import { handleDbException } from 'src/common/helpers/db-exception.helper';
 import { FindDireccionesDto } from './dto/find-direcciones.dto';
-import { MapboxService } from 'src/common/mapbox/mapbox.service';
+import { GoogleMapsService } from 'src/common/google-maps/google-maps.service';
 
 @Injectable()
 export class DireccionService {
   constructor(
     @InjectRepository(Direccion)
     private readonly direccionRepository: Repository<Direccion>,
-    private readonly mapboxService: MapboxService,
+    private readonly googleMapsService: GoogleMapsService,
   ) {}
 
   async create(createDireccionDto: CreateDireccionDto) {
@@ -68,7 +68,7 @@ export class DireccionService {
       });
 
       if (hasCoordinates && needsAutofill) {
-        const reverseResult = await this.mapboxService.reverseGeocode({
+        const reverseResult = await this.googleMapsService.reverseGeocode({
           lat: direccionData.lat,
           lng: direccionData.lng,
         });
@@ -98,7 +98,7 @@ export class DireccionService {
         hasCoordinates &&
         (!direccionData.provider || direccionData.provider.trim().length === 0)
       ) {
-        direccionData.provider = 'mapbox';
+        direccionData.provider = 'google-maps';
       }
 
       if (
@@ -107,7 +107,7 @@ export class DireccionService {
         !direccionData.city
       ) {
         throw new BadRequestException(
-          'No se pudo completar la dirección con Mapbox. Por favor envía los datos obligatorios manualmente.',
+          'No se pudo completar la dirección con Google Maps. Por favor envía los datos obligatorios manualmente.',
         );
       }
 

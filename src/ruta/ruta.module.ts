@@ -8,13 +8,13 @@ import { Pedido } from '../pedido/entities/pedido.entity';
 import { Empleado } from '../empleado/entities/empleado.entity';
 import { Envio } from '../envio/entities/envio.entity';
 import { User } from '../auth/entities/user.entity';
-import { MapboxModule } from '../common/mapbox/mapbox.module';
+import { GoogleMapsModule } from '../common/google-maps/google-maps.module';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Ruta, RutaPedido, Pedido, Empleado, Envio, User]),
-    MapboxModule,
+    GoogleMapsModule,
     AuthModule,
   ],
   controllers: [RutaController],

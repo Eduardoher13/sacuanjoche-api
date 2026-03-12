@@ -56,7 +56,7 @@ export class Ruta {
     length: 100,
     nullable: true,
   })
-  mapboxRequestId?: string;
+  providerRequestId?: string;
 
   @Column({ name: 'profile', type: 'varchar', length: 40, default: 'driving' })
   profile: string;

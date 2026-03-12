@@ -16,7 +16,7 @@ export class CreateDireccionDto {
   })
   @IsOptional()
   @IsString()
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   formattedAddress: string;
 
   @ApiProperty({
@@ -28,7 +28,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   country: string;
 
   @ApiProperty({
@@ -40,7 +40,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   stateProv: string;
 
   @ApiProperty({
@@ -52,7 +52,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   city: string;
 
   @ApiProperty({
@@ -64,7 +64,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   neighborhood?: string;
 
   @ApiProperty({
@@ -76,7 +76,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(200)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   street: string;
 
   @ApiProperty({
@@ -88,7 +88,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(20)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   houseNumber: string;
 
   @ApiProperty({
@@ -100,7 +100,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(20)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   postalCode: string;
 
   @ApiProperty({
@@ -138,7 +138,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   provider: string;
 
   @ApiProperty({
@@ -150,7 +150,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(200)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   placeId?: string;
 
   @ApiProperty({
@@ -162,7 +162,7 @@ export class CreateDireccionDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   accuracy?: string;
 
   @ApiProperty({
@@ -172,7 +172,7 @@ export class CreateDireccionDto {
   })
   @IsOptional()
   @IsString()
-  // Sin validaciones personalizadas - se rellena automáticamente desde Mapbox
+  // Sin validaciones personalizadas - se rellena automáticamente desde Google Maps
   geolocation?: string;
 
   @ApiProperty({

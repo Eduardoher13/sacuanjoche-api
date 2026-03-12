@@ -11,7 +11,7 @@ import { Ruta } from './entities/ruta.entity';
 import { RutaPedido } from './entities/ruta-pedido.entity';
 import { CreateRutaDto } from './dto/create-ruta.dto';
 import { Pedido } from '../pedido/entities/pedido.entity';
-import { MapboxService } from '../common/mapbox/mapbox.service';
+import { GoogleMapsService } from '../common/google-maps/google-maps.service';
 import { ConfigService } from '@nestjs/config';
 import { Empleado } from '../empleado/entities/empleado.entity';
 import { Envio } from '../envio/entities/envio.entity';
@@ -42,7 +42,7 @@ export class RutaService {
     private readonly envioRepository: Repository<Envio>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly mapboxService: MapboxService,
+    private readonly googleMapsService: GoogleMapsService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -136,7 +136,7 @@ export class RutaService {
       };
     });
 
-    const optimization = await this.mapboxService.optimizeRoute({
+    const optimization = await this.googleMapsService.optimizeRoute({
       origin,
       stops: orderedStops.map((stop) => ({
         lat: stop.lat,
@@ -161,7 +161,7 @@ export class RutaService {
 
     if (!waypointsExcludingOrigin.length) {
       throw new BadRequestException(
-        'Mapbox no devolvió puntos de entrega en la ruta calculada.',
+        'Google Maps no devolvió puntos de entrega en la ruta calculada.',
       );
     }
 
@@ -172,7 +172,7 @@ export class RutaService {
 
     if (relevantWaypoints.length < orderedStops.length) {
       throw new BadRequestException(
-        'Mapbox devolvió menos puntos de los esperados para los pedidos solicitados.',
+        'Google Maps devolvió menos puntos de los esperados para los pedidos solicitados.',
       );
     }
 
@@ -222,7 +222,7 @@ export class RutaService {
       distanciaKm: optimization.distanceKm,
       duracionMin: optimization.durationMin,
       geometry: optimization.geometry,
-      mapboxRequestId: optimization.requestId,
+      providerRequestId: optimization.requestId,
       profile: createRutaDto.profile ?? 'driving',
       origenLat: origin.lat,
       origenLng: origin.lng,
@@ -408,7 +408,7 @@ export class RutaService {
     }
 
     throw new BadRequestException(
-      'No se pudo determinar el pedido asociado a un waypoint devuelto por Mapbox.',
+      'No se pudo determinar el pedido asociado a un waypoint devuelto por Google Maps.',
     );
   }
 
@@ -512,7 +512,7 @@ export class RutaService {
             return;
           }
 
-          const metrics = await this.mapboxService.getDistanceBetween(
+          const metrics = await this.googleMapsService.getDistanceBetween(
             { lat: originLat, lng: originLng },
             { lat: destinoLat, lng: destinoLng },
             ruta.profile,
@@ -536,7 +536,7 @@ export class RutaService {
           return;
         }
 
-        const metrics = await this.mapboxService.getDistanceBetween(
+        const metrics = await this.googleMapsService.getDistanceBetween(
           { lat: originLat, lng: originLng },
           { lat: destinoLat, lng: destinoLng },
           ruta.profile,

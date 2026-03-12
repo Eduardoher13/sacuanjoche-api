@@ -15,8 +15,8 @@ export interface OptimizeRouteResult {
   distanceKm: number;
   durationMin: number;
   geometry: string | null;
-  waypoints: MapboxWaypoint[];
-  legs: MapboxLeg[];
+  waypoints: GoogleMapsWaypoint[];
+  legs: GoogleMapsLeg[];
   requestId?: string;
 }
 
@@ -72,20 +72,18 @@ export interface PointToPointMetrics {
   distanceKm: number;
   durationMin: number | null;
   geometry?: string | null;
-  source: 'mapbox' | 'haversine';
+  source: 'google-maps' | 'haversine';
 }
 
-export interface MapboxWaypoint {
+export interface GoogleMapsWaypoint {
   name: string;
   location: [number, number];
   waypoint_index: number;
-  trips_index?: number;
-  distance?: number;
-  target?: [number, number];
   original_index?: number;
+  placeId?: string;
 }
 
-export interface MapboxLeg {
+export interface GoogleMapsLeg {
   distance: number;
   duration: number;
 }
