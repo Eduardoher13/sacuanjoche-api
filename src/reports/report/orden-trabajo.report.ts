@@ -7,6 +7,7 @@ import { Pedido } from '../../pedido/entities/pedido.entity';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { join } from 'path';
 import * as fs from 'fs';
+import { text } from 'stream/consumers';
 
 @Injectable()
 export class OrdenTrabajoReport {
@@ -54,6 +55,11 @@ export class OrdenTrabajoReport {
     }
 
     // Datos del pedido
+
+    const ContactoNombre = pedidoCompleto.contactoEntrega
+      ? `${pedidoCompleto.contactoEntrega.nombre} ${pedidoCompleto.contactoEntrega.apellido}`
+      : '';
+
     const direccionEntrega =
       pedidoCompleto.direccionTxt ||
       pedidoCompleto.direccion?.formattedAddress ||
@@ -96,8 +102,11 @@ export class OrdenTrabajoReport {
     const PAGE_WIDTH = Math.round(13.7 * CM);
     // Posiciones para las medidas exactas solicitadas (13.7cm x 21.4cm), más a la izquierda y arriba
     const positions = {
+
+     nombresContacto: { x: 110, y: 95 },
+
       // Enviarse a: primera línea (más arriba), un poco a la derecha
-      enviarseA: { x: 110, y: 105 },
+      direccionesEntrega: { x: 110, y: 105 },
       // Solicitado por y Tel Oficina en la misma línea
       solicitadoPor: { x: 150 , y: 145 },
       telOficina: { x: 245, y: 200 },
@@ -114,12 +123,19 @@ export class OrdenTrabajoReport {
     };
 
     const content: any[] = [
+
+      {
+        text: ContactoNombre,
+        fontSize: 10,
+        absolutePosition: positions.nombresContacto,
+      },
+
       {
         text: direccionEntrega,
         fontSize: 10,
         // Si el texto es largo, se partirá en varias líneas dentro de este ancho
-        width: Math.max(120, PAGE_WIDTH - positions.enviarseA.x - 20),
-        absolutePosition: positions.enviarseA,
+        width: Math.max(120, PAGE_WIDTH - positions.direccionesEntrega.x - 20),
+        absolutePosition: positions.direccionesEntrega,
       },
       {
         text: clienteNombre,
