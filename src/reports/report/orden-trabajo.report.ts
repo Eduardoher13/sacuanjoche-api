@@ -57,7 +57,7 @@ export class OrdenTrabajoReport {
     // Datos del pedido
 
     const ContactoNombre = pedidoCompleto.contactoEntrega
-      ? `${pedidoCompleto.contactoEntrega.nombre} ${pedidoCompleto.contactoEntrega.apellido}`
+      ? `${pedidoCompleto.contactoEntrega.nombre} ${pedidoCompleto.contactoEntrega.apellido} ${pedidoCompleto.contactoEntrega.telefono}`
       : '';
 
     const direccionEntrega =
@@ -103,15 +103,15 @@ export class OrdenTrabajoReport {
     // Posiciones para las medidas exactas solicitadas (13.7cm x 21.4cm), más a la izquierda y arriba
     const positions = {
 
-     nombresContacto: { x: 110, y: 95 },
+     nombresContacto: { x: 110, y: 105 },
 
       // Enviarse a: primera línea (más arriba), un poco a la derecha
-      direccionesEntrega: { x: 110, y: 105 },
+      direccionesEntrega: { x: 70, y: 120 },
       // Solicitado por y Tel Oficina en la misma línea
-      solicitadoPor: { x: 150 , y: 145 },
-      telOficina: { x: 245, y: 200 },
+      solicitadoPor: { x: 130 , y: 145 },
+      telOficina: { x: 245, y: 193 },
       // Arreglos florales más a la derecha
-      arreglosStart: { x: 240, y: 260, gap: 20 },
+      arreglosStart: { x: 200, y: 260, gap: 20 },
       cintaTarjeta: { x: 160, y: 330 },
       // Valor: más a la izquierda, manteniendo la altura relativa
       valor: { x: 110, y: 320 },
@@ -126,31 +126,31 @@ export class OrdenTrabajoReport {
 
       {
         text: ContactoNombre,
-        fontSize: 10,
+        fontSize: 9,
         absolutePosition: positions.nombresContacto,
       },
 
       {
         text: direccionEntrega,
-        fontSize: 10,
+        fontSize: 9,
         // Si el texto es largo, se partirá en varias líneas dentro de este ancho
-        width: Math.max(120, PAGE_WIDTH - positions.direccionesEntrega.x - 20),
+        width: Math.max(120, PAGE_WIDTH - positions.direccionesEntrega.x - 15),
         absolutePosition: positions.direccionesEntrega,
       },
       {
         text: clienteNombre,
-        fontSize: 10,
+        fontSize: 9,
         absolutePosition: positions.solicitadoPor,
       },
       {
         text: telefonoOficina,
-        fontSize: 10,
+        fontSize: 9,
         absolutePosition: positions.telOficina,
       },
       ...Array.from({ length: Math.max(4, arreglosFlorales.length) }).map(
         (_, i) => ({
           text: arreglosFlorales[i] || '',
-          fontSize: 10,
+          fontSize: 9,
           absolutePosition: {
             x: positions.arreglosStart.x,
             y: positions.arreglosStart.y + positions.arreglosStart.gap * i,
@@ -159,27 +159,27 @@ export class OrdenTrabajoReport {
       ),
       {
         text: mensaje,
-        fontSize: 7,
+        fontSize: 9,
         absolutePosition: positions.cintaTarjeta,
       },
       {
         text: valor ? valor.toFixed(2) : '',
-        fontSize: 7,
+        fontSize: 9,
         absolutePosition: positions.valor,
       },
       {
         text: transporte ? transporte.toFixed(2) : '',
-        fontSize: 7,
+        fontSize: 9,
         absolutePosition: positions.transporte,
       },
       {
         text: numFactura,
-        fontSize: 7,
+        fontSize: 9,
         absolutePosition: positions.factura,
       },
       {
         text: fechaEntrega,
-        fontSize: 7,
+        fontSize: 9,
         absolutePosition: positions.fechaEntrega,
       },
     ];
