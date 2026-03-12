@@ -7,6 +7,7 @@ import {
 const logger = new Logger('DbException');
 
 export function handleDbException(error: any) {
+  console.log("EL ERROR REAL ES:", error); 
   if (error.code === '23505') {
     throw new BadRequestException(error.detail);
   }
@@ -14,3 +15,4 @@ export function handleDbException(error: any) {
   logger.error(error);
   throw new InternalServerErrorException('Unexpected error, check server logs');
 }
+    

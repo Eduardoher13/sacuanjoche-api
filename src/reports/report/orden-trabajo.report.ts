@@ -7,7 +7,6 @@ import { Pedido } from '../../pedido/entities/pedido.entity';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { join } from 'path';
 import * as fs from 'fs';
-import { ContactoEntrega } from 'src/contacto-entrega/entities/contacto-entrega.entity';
 
 @Injectable()
 export class OrdenTrabajoReport {
@@ -16,7 +15,6 @@ export class OrdenTrabajoReport {
     private readonly printerService: PrinterService,
     @InjectRepository(Pedido)
     private readonly pedidoRepository: Repository<Pedido>,
-    private readonly contactoEntregaRepository: Repository<ContactoEntrega>,
   ) {}
 
   /**
@@ -31,8 +29,6 @@ export class OrdenTrabajoReport {
         `El pedido con id ${idPedido} no fue encontrado`,
       );
     }
-
-
 
     // Cargar relaciones adicionales que no vienen en findOne
     const pedidoCompleto = await this.pedidoRepository.findOne({
@@ -58,9 +54,6 @@ export class OrdenTrabajoReport {
     }
 
     // Datos del pedido
-     const nombreContacto = pedidoCompleto.contactoEntrega?.nombre || '';
-
-
     const direccionEntrega =
       pedidoCompleto.direccionTxt ||
       pedidoCompleto.direccion?.formattedAddress ||
@@ -103,11 +96,8 @@ export class OrdenTrabajoReport {
     const PAGE_WIDTH = Math.round(13.7 * CM);
     // Posiciones para las medidas exactas solicitadas (13.7cm x 21.4cm), más a la izquierda y arriba
     const positions = {
-      // Contacto entrega a: 
-      contactoEntrega: { x: 110, y: 85 },
-
-      // Direccion entrega a: primera línea (más arriba), un poco a la derecha
-      direccionesEntrega: { x: 110, y: 105 },
+      // Enviarse a: primera línea (más arriba), un poco a la derecha
+      enviarseA: { x: 110, y: 105 },
       // Solicitado por y Tel Oficina en la misma línea
       solicitadoPor: { x: 150 , y: 145 },
       telOficina: { x: 245, y: 200 },
@@ -124,19 +114,12 @@ export class OrdenTrabajoReport {
     };
 
     const content: any[] = [
-
-      {text:nombreContacto,
-         fontSize: 10,
-        absolutePosition: positions.contactoEntrega
-      },
-
-
       {
         text: direccionEntrega,
         fontSize: 10,
         // Si el texto es largo, se partirá en varias líneas dentro de este ancho
-        width: Math.max(120, PAGE_WIDTH - positions.direccionesEntrega.x - 20),
-        absolutePosition: positions.direccionesEntrega,
+        width: Math.max(120, PAGE_WIDTH - positions.enviarseA.x - 20),
+        absolutePosition: positions.enviarseA,
       },
       {
         text: clienteNombre,

@@ -34,6 +34,7 @@ import { Auth } from 'src/auth/decorators';
 import { ValidRoles } from 'src/auth/interfaces';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CreateLoteArreglosDto } from './dto/create-lote-arreglos.dto';
+import { CreateArregloWithMediaBatchDto } from './dto/create-arreglo-batch.dto';
 
 @ApiTags('Arreglos')
 @ApiBearerAuth('JWT-auth')
@@ -58,65 +59,70 @@ export class ArregloController {
   }
 
   @Post('batch')
-  @Auth(ValidRoles.admin)
-  @UseInterceptors(
-    FilesInterceptor('images', 50, {
-      limits: { fileSize: Number(process.env.DO_SPACES_MAX_UPLOAD_BYTES ?? '5242880') },
-      fileFilter: (_req, file, cb) => {
-        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
-        if (allowed.includes(file.mimetype)) cb(null, true);
-        else cb(new BadRequestException(`Tipo de archivo no permitido: ${file.mimetype}`), false);
-      },
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
+  @Auth(ValidRoles.admin, ValidRoles.vendedor)
+  @ApiOperation({
+    summary:
+      'Crear arreglos por lote (incluyendo flores, accesorios e imágenes)',
+  })
   @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'string',
-          description: 'JSON string con { items: CreateLoteArregloItemDto[] }',
-          example: '{"items":[{"idFormaArreglo":1,"nombre":"Ramo","precioUnitario":49.99,"media":{"isPrimary":true,"orden":0}}]}',
-        },
-        images: {
-          type: 'array',
-          items: { type: 'string', format: 'binary' },
-          description: 'Archivos de imagen (uno por item, emparejados por índice)',
+    type: CreateArregloWithMediaBatchDto,
+    examples: {
+      ejemploCompleto: {
+        summary: 'Lote con 2 arreglos completos',
+        description:
+          'Ejemplo de creación de múltiples arreglos con sus flores, accesorios e imágenes externas.',
+        value: {
+          arreglos: [
+            {
+              idFormaArreglo: 1,
+              nombre: 'Ramo de Rosas Clásico',
+              descripcion:
+                'Un hermoso ramo de 12 rosas rojas ideal para San Valentín.',
+              precioUnitario: 550.0,
+              estado: 'activo',
+              flores: [
+                { idFlor: 1, cantidad: 12 },
+                { idFlor: 3, cantidad: 5 },
+              ],
+              accesorios: [{ idAccesorio: 1, cantidad: 1 }],
+              imagenes: [
+                {
+                  url: 'https://midominio.supabase.co/storage/v1/object/public/bucket/rosas-principal.jpg',
+                  isPrimary: true,
+                  orden: 1,
+                  altText: 'Vista frontal del ramo',
+                },
+                {
+                  url: 'https://midominio.supabase.co/storage/v1/object/public/bucket/rosas-detalle.jpg',
+                  isPrimary: false,
+                  orden: 2,
+                },
+              ],
+            },
+            {
+              idFormaArreglo: 2,
+              nombre: 'Centro de Mesa Girasoles',
+              descripcion: 'Centro de mesa brillante con girasoles frescos.',
+              precioUnitario: 320.5,
+              flores: [{ idFlor: 5, cantidad: 6 }],
+              imagenes: [
+                {
+                  url: 'https://midominio.supabase.co/storage/v1/object/public/bucket/girasoles.jpg',
+                  isPrimary: true,
+                },
+              ],
+            },
+          ],
         },
       },
-      required: ['data', 'images'],
     },
   })
-  @ApiOperation({ summary: 'Crear arreglos por lote con imágenes (admin)' })
   @ApiResponse({ status: 201, description: 'Lote creado exitosamente' })
-  @ApiBadRequestResponse({ description: 'Datos inválidos o desalineación de índices' })
-  async createBatch(
-    @UploadedFiles() files: { buffer: Buffer; mimetype: string; originalname: string }[],
-    @Body('data') data: string,
-  ) {
-    if (!data) throw new BadRequestException('El body debe incluir "data" (string JSON).');
-
-    let parsed: CreateLoteArreglosDto;
-    try {
-      parsed = JSON.parse(data);
-    } catch {
-      throw new BadRequestException('Formato JSON inválido en "data".');
-    }
-
-    if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
-      throw new BadRequestException('El JSON debe contener "items" como array con al menos un elemento.');
-    }
-
-    if (!Array.isArray(files)) {
-      throw new BadRequestException('Se requieren archivos en el campo "images".');
-    }
-
-    if (files.length !== parsed.items.length) {
-      throw new BadRequestException(`El número de imágenes (${files.length}) debe coincidir con el número de items (${parsed.items.length}).`);
-    }
-
-    return this.arregloService.createBatch(parsed.items, files);
+  @ApiBadRequestResponse({
+    description: 'Datos inválidos en alguno de los arreglos',
+  })
+  async createBatch(@Body() batchDto: CreateArregloWithMediaBatchDto) {
+    return this.arregloService.createBatch(batchDto.arreglos);
   }
 
   @Get()
@@ -159,7 +165,9 @@ export class ArregloController {
   }
 
   @Get('public')
-  @ApiOperation({ summary: 'Catálogo público con filtros avanzados (sin autenticación)' })
+  @ApiOperation({
+    summary: 'Catálogo público con filtros avanzados (sin autenticación)',
+  })
   @ApiQuery({
     name: 'limit',
     required: false,
@@ -188,13 +196,13 @@ export class ArregloController {
     name: 'precioMin',
     required: false,
     description: 'Precio mínimo',
-    example: 50.00,
+    example: 50.0,
   })
   @ApiQuery({
     name: 'precioMax',
     required: false,
     description: 'Precio máximo',
-    example: 200.00,
+    example: 200.0,
   })
   @ApiQuery({
     name: 'flores',
