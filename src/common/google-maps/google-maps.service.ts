@@ -31,7 +31,19 @@ import {
   ReverseGeocodeResult,
 } from './google-maps.interfaces';
 
-type RouteStop = OptimizeRouteInput['stops'][number] & { originalIndex: number };
+type RouteStop = OptimizeRouteInput['stops'][number] & {
+  originalIndex: number;
+};
+
+const MANAGUA_BASE_COORDINATES: Coordinates = {
+  lat: 12.1364,
+  lng: -86.2514,
+};
+const MANAGUA_RADIUS_METERS = 25000;
+const NICARAGUA_COUNTRY_CODE = 'ni';
+const FORCED_LANGUAGE = 'es';
+const DEFAULT_FORWARD_LIMIT = 5;
+const DEFAULT_MANAGUA_BOUNDS = '-86.40,12.03,-86.10,12.20';
 
 @Injectable()
 export class GoogleMapsService {
@@ -94,10 +106,7 @@ export class GoogleMapsService {
 
     const legs: GoogleMapsLeg[] = route.legs.map((leg) => ({
       distance: leg.distance?.value ?? 0,
-      duration:
-        leg.duration_in_traffic?.value ??
-        leg.duration?.value ??
-        0,
+      duration: leg.duration_in_traffic?.value ?? leg.duration?.value ?? 0,
     }));
 
     const totalDistanceMeters = legs.reduce(
@@ -136,63 +145,94 @@ export class GoogleMapsService {
       return { results: [], primary: null };
     }
 
-    const limit = Math.max(1, Math.min(options.limit ?? 5, 10));
-    const language = ((options.language ?? 'es').trim() || 'es').toLowerCase();
-    const country = ((options.country ?? 'ni').trim() || 'ni').toLowerCase();
-    const countryCodes = country
-      .split(',')
-      .map((value) => value.trim().toLowerCase())
-      .filter((value) => value.length);
+    const limit = Math.max(
+      1,
+      Math.min(options.limit ?? DEFAULT_FORWARD_LIMIT, DEFAULT_FORWARD_LIMIT),
+    );
+    const language = FORCED_LANGUAGE;
+    const proximity = this.validateCoordinate(
+      options.proximity ?? MANAGUA_BASE_COORDINATES,
+      'proximidad',
+    );
+    const bbox =
+      options.bbox === null
+        ? DEFAULT_MANAGUA_BOUNDS
+        : (options.bbox ?? DEFAULT_MANAGUA_BOUNDS);
+    const expectedTypes = this.buildForwardTypeSet(options.types);
+
+    let placeResults: ForwardGeocodeResult[] = [];
+
+    if (options.autocomplete !== false) {
+      const predictions = await this.fetchAutocompletePredictions(
+        sanitizedQuery,
+        apiKey,
+        language,
+        options.sessionToken,
+      );
+
+      placeResults = await this.hydrateAutocompletePredictions(
+        predictions,
+        apiKey,
+        language,
+      );
+    }
 
     const strictParams = this.buildGeocodeParams(
       sanitizedQuery,
       apiKey,
       language,
-      countryCodes,
-      options.bbox,
+      bbox,
     );
 
-    let results = await this.fetchGeocodeResults(strictParams, sanitizedQuery);
+    let geocodeResults = await this.fetchGeocodeResults(
+      strictParams,
+      sanitizedQuery,
+    );
 
-    if (!results.length && !options.skipRelaxed) {
-      results = await this.fetchGeocodeResults(
+    if (
+      !geocodeResults.length &&
+      !placeResults.length &&
+      !options.skipRelaxed
+    ) {
+      geocodeResults = await this.fetchGeocodeResults(
         {
           address: sanitizedQuery,
           key: apiKey,
           language,
-          region: countryCodes[0] || 'ni',
+          region: NICARAGUA_COUNTRY_CODE,
+          components: `country:${NICARAGUA_COUNTRY_CODE}`,
         },
         sanitizedQuery,
       );
     }
 
-    let mappedResults = results.map((result) =>
+    const mappedGeocodeResults = geocodeResults.map((result) =>
       this.mapGeocodeResultToForward(result),
     );
 
-    if (options.types?.length) {
-      const expectedTypes = new Set(
-        options.types.map((value) => value.trim().toLowerCase()),
-      );
-      mappedResults = mappedResults.filter((result) => {
-        const googleResult = results.find((item) => item.place_id === result.id);
-        return googleResult?.types?.some((type) => expectedTypes.has(type));
-      });
-    }
+    let mergedResults = this.mergeForwardResultsUnique(
+      placeResults,
+      mappedGeocodeResults,
+    );
 
-    if (options.proximity) {
-      mappedResults = mappedResults.sort((a, b) => {
-        const distanceA = this.calculateHaversineDistance(options.proximity!, a);
-        const distanceB = this.calculateHaversineDistance(options.proximity!, b);
+    mergedResults = mergedResults
+      .filter((result) => this.isResultInNicaragua(result))
+      .sort((a, b) => {
+        const scoreA = this.resolveForwardPriorityScore(a, expectedTypes);
+        const scoreB = this.resolveForwardPriorityScore(b, expectedTypes);
+        if (scoreA !== scoreB) {
+          return scoreA - scoreB;
+        }
+
+        const distanceA = this.calculateHaversineDistance(proximity, a);
+        const distanceB = this.calculateHaversineDistance(proximity, b);
         return distanceA - distanceB;
-      });
-    }
-
-    mappedResults = mappedResults.slice(0, limit);
+      })
+      .slice(0, limit);
 
     return {
-      results: mappedResults,
-      primary: mappedResults[0] ?? null,
+      results: mergedResults,
+      primary: mergedResults[0] ?? null,
     };
   }
 
@@ -248,7 +288,10 @@ export class GoogleMapsService {
   ): Promise<PointToPointMetrics> {
     const apiKey = this.getApiKey();
     const sanitizedOrigin = this.validateCoordinate(origin, 'origen');
-    const sanitizedDestination = this.validateCoordinate(destination, 'destino');
+    const sanitizedDestination = this.validateCoordinate(
+      destination,
+      'destino',
+    );
     const mode = this.resolveTravelMode(profile);
 
     try {
@@ -285,8 +328,8 @@ export class GoogleMapsService {
             typeof element.duration?.value === 'number'
               ? Number(
                   (
-                    (element.duration_in_traffic?.value ?? element.duration.value) /
-                    60
+                    (element.duration_in_traffic?.value ??
+                      element.duration.value) / 60
                   ).toFixed(2),
                 )
               : null,
@@ -329,7 +372,10 @@ export class GoogleMapsService {
       return [0];
     }
 
-    const matrixOrigins = [origin, ...stops].map(({ lat, lng }) => ({ lat, lng }));
+    const matrixOrigins = [origin, ...stops].map(({ lat, lng }) => ({
+      lat,
+      lng,
+    }));
     const matrixDestinations = stops.map(({ lat, lng }) => ({ lat, lng }));
     const elementCount = matrixOrigins.length * matrixDestinations.length;
 
@@ -358,7 +404,11 @@ export class GoogleMapsService {
         'No se pudo optimizar la ruta con Google Maps.',
       );
 
-      return this.resolveOrderFromMatrix(origin, stops, response.data.rows ?? []);
+      return this.resolveOrderFromMatrix(
+        origin,
+        stops,
+        response.data.rows ?? [],
+      );
     } catch (error) {
       this.logger.warn(
         'Google Maps Distance Matrix falló durante la optimización. Se usará un cálculo aproximado.',
@@ -389,11 +439,18 @@ export class GoogleMapsService {
           return {
             index,
             duration:
-              element.duration_in_traffic?.value ?? element.duration?.value ?? Number.MAX_SAFE_INTEGER,
+              element.duration_in_traffic?.value ??
+              element.duration?.value ??
+              Number.MAX_SAFE_INTEGER,
             distance: element.distance?.value ?? Number.MAX_SAFE_INTEGER,
           };
         })
-        .filter((value): value is { index: number; duration: number; distance: number } => value !== null)
+        .filter(
+          (
+            value,
+          ): value is { index: number; duration: number; distance: number } =>
+            value !== null,
+        )
         .sort((a, b) => a.duration - b.duration || a.distance - b.distance);
 
       if (candidates.length) {
@@ -405,7 +462,11 @@ export class GoogleMapsService {
         continue;
       }
 
-      const fallbackIndex = this.findClosestPendingStop(currentCoordinate, stops, pending);
+      const fallbackIndex = this.findClosestPendingStop(
+        currentCoordinate,
+        stops,
+        pending,
+      );
       order.push(fallbackIndex);
       pending.delete(fallbackIndex);
       currentRowIndex = fallbackIndex + 1;
@@ -415,7 +476,10 @@ export class GoogleMapsService {
     return order;
   }
 
-  private resolveOrderByHaversine(origin: Coordinates, stops: RouteStop[]): number[] {
+  private resolveOrderByHaversine(
+    origin: Coordinates,
+    stops: RouteStop[],
+  ): number[] {
     const pending = new Set(stops.map((_, index) => index));
     const order: number[] = [];
     let current = origin;
@@ -494,7 +558,10 @@ export class GoogleMapsService {
 
       return response.data;
     } catch (error) {
-      this.handleGoogleError(error, 'No se pudo optimizar la ruta con Google Maps.');
+      this.handleGoogleError(
+        error,
+        'No se pudo optimizar la ruta con Google Maps.',
+      );
     }
   }
 
@@ -502,7 +569,6 @@ export class GoogleMapsService {
     query: string,
     apiKey: string,
     language: string,
-    countryCodes: string[],
     bbox?: string | null,
   ) {
     const params: {
@@ -519,12 +585,9 @@ export class GoogleMapsService {
       address: query,
       key: apiKey,
       language: language as Language,
-      region: countryCodes[0] || 'ni',
+      region: NICARAGUA_COUNTRY_CODE,
+      components: `country:${NICARAGUA_COUNTRY_CODE}`,
     };
-
-    if (countryCodes.length === 1) {
-      params.components = `country:${countryCodes[0]}`;
-    }
 
     if (bbox !== null && bbox !== undefined) {
       const parsedBounds = this.parseBounds(bbox);
@@ -534,6 +597,217 @@ export class GoogleMapsService {
     }
 
     return params;
+  }
+
+  private async fetchAutocompletePredictions(
+    query: string,
+    apiKey: string,
+    language: string,
+    sessionToken?: string,
+  ): Promise<
+    Array<{
+      place_id: string;
+      description: string;
+      types?: string[];
+    }>
+  > {
+    const predictionsByPlaceId = new Map<
+      string,
+      {
+        place_id: string;
+        description: string;
+        types?: string[];
+      }
+    >();
+
+    const placeTypes = ['address', 'establishment'];
+
+    for (const placeType of placeTypes) {
+      try {
+        const response = await this.client.placeAutocomplete({
+          params: {
+            input: query,
+            key: apiKey,
+            language,
+            components: [`country:${NICARAGUA_COUNTRY_CODE}`],
+            location: MANAGUA_BASE_COORDINATES,
+            radius: MANAGUA_RADIUS_METERS,
+            strictbounds: true,
+            types: placeType,
+            sessiontoken: sessionToken?.trim() || undefined,
+          },
+        });
+
+        if (response.data.status === 'ZERO_RESULTS') {
+          continue;
+        }
+
+        this.ensureGoogleStatus(
+          response.data.status,
+          'No se pudo obtener sugerencias de Google Places.',
+          response.data.error_message,
+        );
+
+        const predictions = (response.data.predictions ?? []) as Array<{
+          place_id: string;
+          description: string;
+          types?: string[];
+        }>;
+
+        predictions.forEach((prediction) => {
+          if (!predictionsByPlaceId.has(prediction.place_id)) {
+            predictionsByPlaceId.set(prediction.place_id, prediction);
+          }
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Google Places autocomplete falló para type=${placeType}. Continuando con Geocoding estricto.`,
+        );
+      }
+    }
+
+    return Array.from(predictionsByPlaceId.values());
+  }
+
+  private async hydrateAutocompletePredictions(
+    predictions: Array<{
+      place_id: string;
+      description: string;
+      types?: string[];
+    }>,
+    apiKey: string,
+    language: string,
+  ): Promise<ForwardGeocodeResult[]> {
+    const geocoded = await Promise.all(
+      predictions.map(async (prediction) => {
+        try {
+          const response = await this.client.geocode({
+            params: {
+              place_id: prediction.place_id,
+              key: apiKey,
+              language: language as Language,
+              region: NICARAGUA_COUNTRY_CODE,
+              components: `country:${NICARAGUA_COUNTRY_CODE}`,
+            },
+          });
+
+          if (response.data.status === 'ZERO_RESULTS') {
+            return null;
+          }
+
+          this.ensureGoogleStatus(
+            response.data.status,
+            'No se pudo resolver la sugerencia de Google Places.',
+            response.data.error_message,
+          );
+
+          const result = response.data.results?.[0];
+          if (!result) {
+            return null;
+          }
+
+          const mapped = this.mapGeocodeResultToForward(result);
+          return {
+            ...mapped,
+            label: prediction.description || mapped.label,
+          };
+        } catch (error) {
+          return null;
+        }
+      }),
+    );
+
+    return geocoded.filter(
+      (item): item is ForwardGeocodeResult => item !== null,
+    );
+  }
+
+  private buildForwardTypeSet(types?: string[]): Set<string> {
+    const normalized = types
+      ?.map((value) => value.trim().toLowerCase())
+      .filter((value) => value.length);
+
+    if (normalized?.length) {
+      return new Set(normalized);
+    }
+
+    return new Set([
+      'street_address',
+      'premise',
+      'subpremise',
+      'establishment',
+      'point_of_interest',
+    ]);
+  }
+
+  private resolveForwardPriorityScore(
+    result: ForwardGeocodeResult,
+    expectedTypes: Set<string>,
+  ): number {
+    const label = result.label.toLowerCase();
+    const hasStreetSignal =
+      Boolean(result.street) ||
+      /\b(calle|avenida|av\.?|km|carretera|pista|contiguo|frente|casa|local)\b/i.test(
+        label,
+      );
+
+    const hasEstablishmentSignal =
+      /\b(plaza|centro|hotel|restaurante|farmacia|supermercado|tienda|hospital|clinica|universidad|colegio)\b/i.test(
+        label,
+      );
+
+    const wantsAddress =
+      expectedTypes.has('street_address') ||
+      expectedTypes.has('address') ||
+      expectedTypes.has('premise') ||
+      expectedTypes.has('subpremise');
+    const wantsEstablishment =
+      expectedTypes.has('establishment') ||
+      expectedTypes.has('point_of_interest');
+
+    if (wantsAddress && hasStreetSignal) {
+      return 0;
+    }
+
+    if (wantsEstablishment && hasEstablishmentSignal) {
+      return 1;
+    }
+
+    if (hasStreetSignal) {
+      return 2;
+    }
+
+    if (hasEstablishmentSignal) {
+      return 3;
+    }
+
+    return 4;
+  }
+
+  private isResultInNicaragua(result: ForwardGeocodeResult): boolean {
+    const country = result.country?.trim().toLowerCase();
+    if (!country) {
+      return true;
+    }
+
+    return country === 'nicaragua' || country === 'ni';
+  }
+
+  private mergeForwardResultsUnique(
+    priorityResults: ForwardGeocodeResult[],
+    secondaryResults: ForwardGeocodeResult[],
+  ): ForwardGeocodeResult[] {
+    const byKey = new Map<string, ForwardGeocodeResult>();
+
+    [...priorityResults, ...secondaryResults].forEach((result) => {
+      const key =
+        result.id || `${result.lat.toFixed(6)}:${result.lng.toFixed(6)}`;
+      if (!byKey.has(key)) {
+        byKey.set(key, result);
+      }
+    });
+
+    return Array.from(byKey.values());
   }
 
   private async fetchGeocodeResults(
@@ -573,11 +847,16 @@ export class GoogleMapsService {
         },
         error: error instanceof Error ? error.message : error,
       });
-      this.handleGoogleError(error, 'No se pudo buscar la dirección en Google Maps.');
+      this.handleGoogleError(
+        error,
+        'No se pudo buscar la dirección en Google Maps.',
+      );
     }
   }
 
-  private mapGeocodeResultToForward(result: GeocodeResult): ForwardGeocodeResult {
+  private mapGeocodeResultToForward(
+    result: GeocodeResult,
+  ): ForwardGeocodeResult {
     const components = this.buildAddressComponentMap(result);
 
     return {
@@ -602,7 +881,9 @@ export class GoogleMapsService {
     };
   }
 
-  private mapGeocodeResultToReverse(result: GeocodeResult): ReverseGeocodeResult {
+  private mapGeocodeResultToReverse(
+    result: GeocodeResult,
+  ): ReverseGeocodeResult {
     const components = this.buildAddressComponentMap(result);
 
     return {
@@ -627,7 +908,10 @@ export class GoogleMapsService {
       lng: result.geometry.location.lng,
       provider: 'google-maps',
       context: Object.fromEntries(
-        Array.from(components.entries()).map(([key, value]) => [key, value.long_name]),
+        Array.from(components.entries()).map(([key, value]) => [
+          key,
+          value.long_name,
+        ]),
       ),
     };
   }
@@ -647,7 +931,10 @@ export class GoogleMapsService {
 
     return types
       .map((type) => this.mapTypeAlias(type))
-      .filter((type, index, values) => Boolean(type) && values.indexOf(type) === index);
+      .filter(
+        (type, index, values) =>
+          Boolean(type) && values.indexOf(type) === index,
+      );
   }
 
   private mapTypeAlias(type: string): AddressType {
@@ -666,9 +953,7 @@ export class GoogleMapsService {
   }
 
   private parseBounds(bbox: string) {
-    const values = bbox
-      .split(',')
-      .map((value) => Number(value.trim()));
+    const values = bbox.split(',').map((value) => Number(value.trim()));
 
     if (values.length !== 4 || values.some((value) => Number.isNaN(value))) {
       return null;
@@ -684,7 +969,9 @@ export class GoogleMapsService {
 
   private resolveTravelMode(profile?: string): TravelMode {
     const normalizedProfile = (
-      profile ?? this.configService.get<string>('GOOGLE_MAPS_TRAVEL_MODE') ?? 'driving'
+      profile ??
+      this.configService.get<string>('GOOGLE_MAPS_TRAVEL_MODE') ??
+      'driving'
     )
       .trim()
       .toLowerCase();
@@ -737,7 +1024,9 @@ export class GoogleMapsService {
         throw new BadRequestException(providerMessage || defaultMessage);
       case 'UNKNOWN_ERROR':
       default:
-        throw new ServiceUnavailableException(providerMessage || defaultMessage);
+        throw new ServiceUnavailableException(
+          providerMessage || defaultMessage,
+        );
     }
   }
 
@@ -746,12 +1035,16 @@ export class GoogleMapsService {
       typeof error === 'object' &&
       error !== null &&
       'response' in error &&
-      typeof (error as {
-        response?: { data?: { status?: string; error_message?: string } };
-      }).response?.data === 'object'
-        ? (error as {
-            response: { data: { status?: string; error_message?: string } };
-          }).response.data
+      typeof (
+        error as {
+          response?: { data?: { status?: string; error_message?: string } };
+        }
+      ).response?.data === 'object'
+        ? (
+            error as {
+              response: { data: { status?: string; error_message?: string } };
+            }
+          ).response.data
         : undefined;
 
     const responseStatus = responseData?.status;

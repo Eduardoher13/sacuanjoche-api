@@ -142,4 +142,16 @@ export class ForwardGeocodeQueryDto {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   skipRelaxed?: boolean;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Token de sesión para agrupar consultas de autocomplete y mejorar la relevancia de Places.',
+    example: '8f9a6b2e5f9f4ec7a2f4e0c0f7dd9c42',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  @NoSqlInjection()
+  sessionToken?: string;
 }

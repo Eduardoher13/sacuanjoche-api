@@ -110,6 +110,7 @@ export class GoogleMapsController {
       fuzzyMatch: queryDto.fuzzyMatch,
       autocomplete: queryDto.autocomplete,
       skipRelaxed: queryDto.skipRelaxed,
+      sessionToken: queryDto.sessionToken,
     });
   }
 }

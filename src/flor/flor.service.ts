@@ -42,7 +42,7 @@ export class FlorService {
         '(flor.nombre ILIKE :search OR flor.color ILIKE :search OR flor.tipo ILIKE :search)',
         { search },
       );
-    }
+    } 
 
     qb.orderBy('flor.nombre', 'ASC').addOrderBy('flor.idFlor', 'ASC');
 

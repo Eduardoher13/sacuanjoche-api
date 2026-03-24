@@ -49,6 +49,7 @@ export interface ForwardGeocodeOptions {
   fuzzyMatch?: boolean;
   autocomplete?: boolean;
   skipRelaxed?: boolean;
+  sessionToken?: string;
 }
 
 export interface ReverseGeocodeResult {
