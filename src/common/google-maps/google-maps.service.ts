@@ -4,6 +4,7 @@ import {
   DistanceMatrixRow,
   GeocodeResult,
   Language,
+  PlaceAutocompleteType,
   TrafficModel,
   TravelMode,
 } from '@googlemaps/google-maps-services-js';
@@ -620,7 +621,10 @@ export class GoogleMapsService {
       }
     >();
 
-    const placeTypes = ['address', 'establishment'];
+    const placeTypes: PlaceAutocompleteType[] = [
+      PlaceAutocompleteType.address,
+      PlaceAutocompleteType.establishment,
+    ];
 
     for (const placeType of placeTypes) {
       try {
