@@ -40,7 +40,7 @@ const MANAGUA_BASE_COORDINATES: Coordinates = {
   lat: 12.1364,
   lng: -86.2514,
 };
-const MANAGUA_RADIUS_METERS = 25000;
+const MANAGUA_RADIUS_METERS = 60000;
 const NICARAGUA_COUNTRY_CODE = 'ni';
 const FORCED_LANGUAGE = 'es';
 const DEFAULT_FORWARD_LIMIT = 5;
@@ -150,6 +150,7 @@ export class GoogleMapsService {
       1,
       Math.min(options.limit ?? DEFAULT_FORWARD_LIMIT, DEFAULT_FORWARD_LIMIT),
     );
+    const allowRelaxedFallback = options.skipRelaxed === false;
     const language = FORCED_LANGUAGE;
     const proximity = this.validateCoordinate(
       options.proximity ?? MANAGUA_BASE_COORDINATES,
@@ -193,7 +194,7 @@ export class GoogleMapsService {
     if (
       !geocodeResults.length &&
       !placeResults.length &&
-      !options.skipRelaxed
+      allowRelaxedFallback
     ) {
       geocodeResults = await this.fetchGeocodeResults(
         {
@@ -624,6 +625,7 @@ export class GoogleMapsService {
     const placeTypes: PlaceAutocompleteType[] = [
       PlaceAutocompleteType.address,
       PlaceAutocompleteType.establishment,
+      PlaceAutocompleteType.geocode,
     ];
 
     for (const placeType of placeTypes) {
@@ -636,7 +638,7 @@ export class GoogleMapsService {
             components: [`country:${NICARAGUA_COUNTRY_CODE}`],
             location: MANAGUA_BASE_COORDINATES,
             radius: MANAGUA_RADIUS_METERS,
-            strictbounds: true,
+            strictbounds: false,
             types: placeType,
             sessiontoken: sessionToken?.trim() || undefined,
           },
@@ -791,7 +793,7 @@ export class GoogleMapsService {
   private isResultInNicaragua(result: ForwardGeocodeResult): boolean {
     const country = result.country?.trim().toLowerCase();
     if (!country) {
-      return true;
+      return false;
     }
 
     return country === 'nicaragua' || country === 'ni';
