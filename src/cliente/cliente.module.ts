@@ -4,12 +4,12 @@ import { ClienteService } from './cliente.service';
 import { ClienteController } from './cliente.controller';
 import { Cliente } from './entities/cliente.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { Compania } from 'src/compania/entities/compañia.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Cliente]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Cliente, Compania]), AuthModule],
   controllers: [ClienteController],
   providers: [ClienteService],
   exports: [ClienteService],
 })
 export class ClienteModule {}
-

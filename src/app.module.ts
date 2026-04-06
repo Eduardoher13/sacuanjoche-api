@@ -35,6 +35,7 @@ import { GoogleMapsModule } from './common/google-maps/google-maps.module';
 import { PrinterModule } from './printer/printer.module';
 import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CompaniaModule } from './compania/compañia.module';
 
 @Module({
   imports: [
@@ -112,6 +113,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     PrinterModule,
     ReportsModule,
     NotificationsModule,
+    CompaniaModule,
   ],
   controllers: [AppController],
   providers: [

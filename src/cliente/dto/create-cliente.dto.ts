@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum, MaxLength, IsPhoneNumber } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  MaxLength,
+  IsNumber,
+} from 'class-validator';
 import { ClienteEstado } from '../../common/enums';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
 import { NoSqlInjection } from '../../common/validators/no-sql-injection.decorator';
@@ -11,7 +17,7 @@ export class CreateClienteDto {
   @ApiProperty({
     description: 'Primer nombre del cliente',
     example: 'Juan',
-    maxLength: 100
+    maxLength: 100,
   })
   @IsString()
   @MaxLength(100)
@@ -22,9 +28,22 @@ export class CreateClienteDto {
   primerNombre: string;
 
   @ApiProperty({
+    description: 'Segundo nombre del cliente',
+    example: 'Carlos',
+    maxLength: 100,
+  })
+  @IsString()
+  @MaxLength(100)
+  @AllowedCharacters()
+  @NoSqlInjection()
+  @NoRandomString()
+  @NoExcessiveRepetition(3)
+  segundoNombre: string;
+
+  @ApiProperty({
     description: 'Primer apellido del cliente',
     example: 'Pérez',
-    maxLength: 100
+    maxLength: 100,
   })
   @IsString()
   @MaxLength(100)
@@ -35,10 +54,24 @@ export class CreateClienteDto {
   primerApellido: string;
 
   @ApiProperty({
-    description: 'Número de teléfono del cliente (formato: 505 seguido de 8 dígitos)',
+    description: 'Segundo apellido del cliente',
+    example: 'Lopez',
+    maxLength: 100,
+  })
+  @IsString()
+  @MaxLength(100)
+  @AllowedCharacters()
+  @NoSqlInjection()
+  @NoRandomString()
+  @NoExcessiveRepetition(3)
+  segundoApellido: string;
+
+  @ApiProperty({
+    description:
+      'Número de teléfono del cliente (formato: 505 seguido de 8 dígitos)',
     example: '50512345678',
     required: false,
-    maxLength: 11
+    maxLength: 11,
   })
   @IsOptional()
   @IsString()
@@ -52,10 +85,19 @@ export class CreateClienteDto {
     example: ClienteEstado.ACTIVO,
     enum: ClienteEstado,
     default: ClienteEstado.ACTIVO,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsEnum(ClienteEstado)
   estado?: ClienteEstado;
-}
 
+  @ApiProperty({
+    description: 'ID de la compania a la que pertenece el cliente',
+    example: 1,
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsNumber()
+  idCompania?: number | null;
+}

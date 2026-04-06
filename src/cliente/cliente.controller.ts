@@ -65,8 +65,14 @@ export class ClienteController {
   @ApiQuery({
     name: 'q',
     required: false,
-    description: 'Texto a buscar en el nombre, apellido o teléfono del cliente',
+    description: 'Texto a buscar en nombres, apellidos, telefono o compania del cliente',
     example: 'María',
+  })
+  @ApiQuery({
+    name: 'idCompania',
+    required: false,
+    description: 'ID de la compania para filtrar clientes',
+    example: 1,
   })
   @ApiResponse({
     status: 200,

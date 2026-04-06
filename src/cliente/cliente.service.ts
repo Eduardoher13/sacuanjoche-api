@@ -6,18 +6,37 @@ import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
 import { handleDbException } from 'src/common/helpers/db-exception.helper';
 import { FindClientesDto } from './dto/find-clientes.dto';
+import { Compania } from 'src/compania/entities/compañia.entity';
 
 @Injectable()
 export class ClienteService {
   constructor(
     @InjectRepository(Cliente)
     private readonly clienteRepository: Repository<Cliente>,
+    @InjectRepository(Compania)
+    private readonly companiaRepository: Repository<Compania>,
   ) {}
 
   async create(createClienteDto: CreateClienteDto) {
     try {
+      const { idCompania, ...clienteData } = createClienteDto;
+
+      let compania: Compania | null = null;
+      if (idCompania) {
+        compania = await this.companiaRepository.findOneBy({
+          idCompania,
+        });
+
+        if (!compania) {
+          throw new NotFoundException(
+            `La compania con id ${idCompania} no fue encontrada`,
+          );
+        }
+      }
+
       const newCliente = this.clienteRepository.create({
-        ...createClienteDto,
+        ...clienteData,
+        compania,
       });
 
       await this.clienteRepository.save(newCliente);
@@ -29,16 +48,22 @@ export class ClienteService {
   }
 
   async findAll(filters: FindClientesDto) {
-    const { limit = 10, offset = 0, q } = filters;
+    const { limit = 10, offset = 0, q, idCompania } = filters;
 
-    const qb = this.clienteRepository.createQueryBuilder('cliente');
+    const qb = this.clienteRepository
+      .createQueryBuilder('cliente')
+      .leftJoinAndSelect('cliente.compania', 'compania');
 
     qb.take(limit).skip(offset);
+
+    if (idCompania !== undefined) {
+      qb.andWhere('compania.idCompania = :idCompania', { idCompania });
+    }
 
     if (q) {
       const search = `%${q}%`;
       qb.andWhere(
-        '(cliente.primerNombre ILIKE :search OR cliente.primerApellido ILIKE :search OR cliente.telefono ILIKE :search)',
+        '(cliente.primerNombre ILIKE :search OR cliente.segundoNombre ILIKE :search OR cliente.primerApellido ILIKE :search OR cliente.segundoApellido ILIKE :search OR cliente.telefono ILIKE :search OR compania.nombre ILIKE :search)',
         { search },
       );
     }
@@ -52,8 +77,9 @@ export class ClienteService {
   }
 
   async findOne(id: number) {
-    const cliente = await this.clienteRepository.findOneBy({
-      idCliente: id,
+    const cliente = await this.clienteRepository.findOne({
+      where: { idCliente: id },
+      relations: ['compania'],
     });
 
     if (!cliente) {
@@ -65,9 +91,33 @@ export class ClienteService {
 
   async update(id: number, updateClienteDto: UpdateClienteDto) {
     try {
-      const cliente = await this.clienteRepository.preload({
+      const { idCompania, ...clienteData } = updateClienteDto;
+
+      const preloadData: Partial<Cliente> = {
         idCliente: id,
-        ...updateClienteDto,
+        ...clienteData,
+      };
+
+      if (idCompania !== undefined) {
+        if (idCompania === null) {
+          preloadData.compania = null;
+        } else {
+          const compania = await this.companiaRepository.findOneBy({
+            idCompania,
+          });
+
+          if (!compania) {
+            throw new NotFoundException(
+              `La compania con id ${idCompania} no fue encontrada`,
+            );
+          }
+
+          preloadData.compania = compania;
+        }
+      }
+
+      const cliente = await this.clienteRepository.preload({
+        ...preloadData,
       });
 
       if (!cliente) {
