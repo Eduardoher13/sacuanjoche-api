@@ -22,14 +22,24 @@ export class Cliente {
   @Column({ name: 'primer_nombre', type: 'varchar', length: 100 })
   primerNombre: string;
 
-  @Column({ name: 'segundo_nombre', type: 'varchar', length: 100 })
-  segundoNombre: string;
+  @Column({
+    name: 'segundo_nombre',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  segundoNombre: string | null;
 
   @Column({ name: 'primer_apellido', type: 'varchar', length: 100 })
   primerApellido: string;
 
-  @Column({ name: 'segundo_apellido', type: 'varchar', length: 100 })
-  segundoApellido: string;
+  @Column({
+    name: 'segundo_apellido',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  segundoApellido: string | null;
 
   @Column({ name: 'telefono', type: 'varchar', length: 20, nullable: true })
   telefono: string;
