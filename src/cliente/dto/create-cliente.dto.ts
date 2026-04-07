@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsEnum, MaxLength } from 'class-validator';
 import { ClienteEstado } from '../../common/enums';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
+import { InternationalPhone } from '../../common/validators/international-phone.decorator';
 import { NoSqlInjection } from '../../common/validators/no-sql-injection.decorator';
 import { NoRandomString } from '../../common/validators/no-random-string.decorator';
 import { NoExcessiveRepetition } from '../../common/validators/no-excessive-repetition.decorator';
-import { NicaraguanPhone } from '../../common/validators/nicaraguan-phone.decorator';
 
 export class CreateClienteDto {
   @ApiProperty({
@@ -62,15 +62,15 @@ export class CreateClienteDto {
 
   @ApiProperty({
     description:
-      'Número de teléfono del cliente (formato: 505 seguido de 8 dígitos)',
-    example: '50512345678',
+      'Numero de telefono del cliente en formato internacional (ejemplo: +50512345678). Tambien acepta 50512345678 por compatibilidad.',
+    example: '+50512345678',
     required: false,
-    maxLength: 11,
+    maxLength: 20,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(11)
-  @NicaraguanPhone()
+  @MaxLength(20)
+  @InternationalPhone()
   @NoSqlInjection()
   telefono?: string;
 
