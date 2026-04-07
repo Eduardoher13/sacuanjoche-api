@@ -1,11 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsEnum,
-  MaxLength,
-  IsNumber,
-} from 'class-validator';
+import { IsString, IsOptional, IsEnum, MaxLength } from 'class-validator';
 import { ClienteEstado } from '../../common/enums';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
 import { NoSqlInjection } from '../../common/validators/no-sql-injection.decorator';
@@ -81,6 +75,21 @@ export class CreateClienteDto {
   telefono?: string;
 
   @ApiProperty({
+    description: 'Nombre de la empresa del cliente',
+    example: 'Floristeria Centro',
+    required: false,
+    maxLength: 150,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  @AllowedCharacters()
+  @NoSqlInjection()
+  @NoRandomString()
+  @NoExcessiveRepetition(3)
+  nombreEmpresa?: string;
+
+  @ApiProperty({
     description: 'Estado del cliente',
     example: ClienteEstado.ACTIVO,
     enum: ClienteEstado,
@@ -90,14 +99,4 @@ export class CreateClienteDto {
   @IsOptional()
   @IsEnum(ClienteEstado)
   estado?: ClienteEstado;
-
-  @ApiProperty({
-    description: 'ID de la compania a la que pertenece el cliente',
-    example: 1,
-    required: false,
-    nullable: true,
-  })
-  @IsOptional()
-  @IsNumber()
-  idCompania?: number | null;
 }

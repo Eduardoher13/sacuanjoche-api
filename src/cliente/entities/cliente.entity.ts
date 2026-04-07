@@ -5,14 +5,11 @@ import {
   CreateDateColumn,
   OneToOne,
   OneToMany,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
 import { Pedido } from '../../pedido/entities/pedido.entity';
 import { ClienteDireccion } from '../../cliente-direccion/entities/cliente-direccion.entity';
 import { ClienteEstado } from '../../common/enums';
-import { Compania } from '../../compania/entities/compañia.entity';
 
 @Entity('cliente')
 export class Cliente {
@@ -45,6 +42,14 @@ export class Cliente {
   telefono: string;
 
   @Column({
+    name: 'nombre_empresa',
+    type: 'varchar',
+    length: 150,
+    nullable: true,
+  })
+  nombreEmpresa: string | null;
+
+  @Column({
     name: 'estado',
     type: 'varchar',
     length: 50,
@@ -68,11 +73,4 @@ export class Cliente {
     (clienteDireccion) => clienteDireccion.cliente,
   )
   direcciones: ClienteDireccion[];
-
-  @ManyToOne(() => Compania, (compania) => compania.clientes, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'id_compania' })
-  compania?: Compania;
 }
