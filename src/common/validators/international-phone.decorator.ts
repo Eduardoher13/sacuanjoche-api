@@ -26,17 +26,12 @@ export class InternationalPhoneConstraint
       return true;
     }
 
-    // Compatibilidad: permite Nicaragua sin + (505XXXXXXXX).
-    if (/^505\d{8}$/.test(normalizedValue)) {
-      return true;
-    }
-
-    // E.164: + seguido de 8 a 15 digitos en total.
-    return /^\+[1-9]\d{7,14}$/.test(normalizedValue);
+    // Formato internacional con + opcional, de 8 a 15 digitos.
+    return /^\+?[1-9]\d{7,14}$/.test(normalizedValue);
   }
 
   defaultMessage(args: ValidationArguments) {
-    return 'El telefono debe ser valido en formato internacional (ejemplo: +50512345678).';
+    return 'El telefono debe ser valido en formato internacional (ejemplos: +50512345678 o 50512345678).';
   }
 }
 
