@@ -17,7 +17,7 @@ import { NoExcessiveRepetition } from '../../common/validators/no-excessive-repe
 import { NoRandomString } from '../../common/validators/no-random-string.decorator';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
 import { NoRandomAddress } from '../../common/validators/no-random-address.decorator';
-import { NicaraguanPhone } from '../../common/validators/nicaraguan-phone.decorator';
+import { InternationalPhone } from '../../common/validators/international-phone.decorator';
 import { ClienteEstado } from '../../common/enums';
 
 class CreateUserClienteDto {
@@ -47,13 +47,14 @@ class CreateUserClienteDto {
 
 
   @ApiPropertyOptional({
-    description: 'Teléfono de contacto (formato: 505 seguido de 8 dígitos)',
-    example: '50512345678',
+    description:
+      'Telefono de contacto en formato internacional (ejemplo: +50512345678). Tambien acepta 50512345678 por compatibilidad.',
+    example: '+50512345678',
   })
   @IsOptional()
   @IsString({ message: 'El teléfono debe ser una cadena de texto' })
-  @NicaraguanPhone()
-  @MaxLength(11, { message: 'El teléfono no puede exceder 11 caracteres' })
+  @InternationalPhone()
+  @MaxLength(20, { message: 'El telefono no puede exceder 20 caracteres' })
   @NoSqlInjection()
   // No aplicamos AllowedCharacters porque solo debe contener números
   telefono?: string;
