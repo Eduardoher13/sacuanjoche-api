@@ -1,11 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsEnum, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ClienteEstado } from '../../common/enums';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
 import { NoSqlInjection } from '../../common/validators/no-sql-injection.decorator';
 import { NoRandomString } from '../../common/validators/no-random-string.decorator';
 import { NoExcessiveRepetition } from '../../common/validators/no-excessive-repetition.decorator';
 import { NicaraguanPhone } from '../../common/validators/nicaraguan-phone.decorator';
+
+const emptyToUndefined = ({ value }: { value: unknown }) =>
+  value === '' ? undefined : value;
 
 export class CreateClienteDto {
   @ApiProperty({
@@ -24,15 +28,18 @@ export class CreateClienteDto {
   @ApiProperty({
     description: 'Segundo nombre del cliente',
     example: 'Carlos',
+    required: false,
     maxLength: 100,
   })
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   @AllowedCharacters()
   @NoSqlInjection()
   @NoRandomString()
   @NoExcessiveRepetition(3)
-  segundoNombre: string;
+  segundoNombre?: string;
 
   @ApiProperty({
     description: 'Primer apellido del cliente',
@@ -50,15 +57,18 @@ export class CreateClienteDto {
   @ApiProperty({
     description: 'Segundo apellido del cliente',
     example: 'Lopez',
+    required: false,
     maxLength: 100,
   })
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   @AllowedCharacters()
   @NoSqlInjection()
   @NoRandomString()
   @NoExcessiveRepetition(3)
-  segundoApellido: string;
+  segundoApellido?: string;
 
   @ApiProperty({
     description:
@@ -67,6 +77,7 @@ export class CreateClienteDto {
     required: false,
     maxLength: 11,
   })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(11)
@@ -80,6 +91,7 @@ export class CreateClienteDto {
     required: false,
     maxLength: 150,
   })
+  @Transform(emptyToUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(150)
