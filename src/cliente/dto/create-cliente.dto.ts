@@ -3,13 +3,10 @@ import { IsString, IsOptional, IsEnum, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ClienteEstado } from '../../common/enums';
 import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
-import { InternationalPhone } from '../../common/validators/international-phone.decorator';
 import { NoSqlInjection } from '../../common/validators/no-sql-injection.decorator';
 import { NoRandomString } from '../../common/validators/no-random-string.decorator';
 import { NoExcessiveRepetition } from '../../common/validators/no-excessive-repetition.decorator';
-
-const emptyToUndefined = ({ value }: { value: unknown }) =>
-  value === '' ? undefined : value;
+import { NicaraguanPhone } from '../../common/validators/nicaraguan-phone.decorator';
 
 export class CreateClienteDto {
   @ApiProperty({
@@ -31,7 +28,7 @@ export class CreateClienteDto {
     required: false,
     maxLength: 100,
   })
-  @Transform(emptyToUndefined)
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   @MaxLength(100)
@@ -60,7 +57,7 @@ export class CreateClienteDto {
     required: false,
     maxLength: 100,
   })
-  @Transform(emptyToUndefined)
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   @MaxLength(100)
@@ -72,16 +69,15 @@ export class CreateClienteDto {
 
   @ApiProperty({
     description:
-      'Numero de telefono del cliente en formato internacional (ejemplo: +50512345678). Tambien acepta 50512345678 por compatibilidad.',
-    example: '+50512345678',
+      'Número de teléfono del cliente (formato: 505 seguido de 8 dígitos)',
+    example: '50512345678',
     required: false,
-    maxLength: 20,
+    maxLength: 11,
   })
-  @Transform(emptyToUndefined)
   @IsOptional()
   @IsString()
-  @MaxLength(20)
-  @InternationalPhone()
+  @MaxLength(11)
+  @NicaraguanPhone()
   @NoSqlInjection()
   telefono?: string;
 
@@ -91,7 +87,6 @@ export class CreateClienteDto {
     required: false,
     maxLength: 150,
   })
-  @Transform(emptyToUndefined)
   @IsOptional()
   @IsString()
   @MaxLength(150)
