@@ -44,21 +44,31 @@ import { NotificationsModule } from './notifications/notifications.module';
     }),
 
     // ========== Rate Limiting (Throttler) ==========
+    // Keep aggressive defaults in local/dev, but avoid throttling normal UI traffic in prod.
     ThrottlerModule.forRoot([
       {
         name: 'short',
-        ttl: 60000, // 1 minuto
-        limit: 20, // 20 peticiones por minuto
+        ttl: Number(process.env.THROTTLE_SHORT_TTL ?? 60000),
+        limit: Number(
+          process.env.THROTTLE_SHORT_LIMIT ??
+            (process.env.STAGE === 'prod' ? 300 : 20),
+        ),
       },
       {
         name: 'medium',
-        ttl: 600000, // 10 minutos
-        limit: 100, // 100 peticiones por 10 minutos
+        ttl: Number(process.env.THROTTLE_MEDIUM_TTL ?? 600000),
+        limit: Number(
+          process.env.THROTTLE_MEDIUM_LIMIT ??
+            (process.env.STAGE === 'prod' ? 2000 : 100),
+        ),
       },
       {
         name: 'long',
-        ttl: 3600000, // 1 hora
-        limit: 1000, // 1000 peticiones por hora
+        ttl: Number(process.env.THROTTLE_LONG_TTL ?? 3600000),
+        limit: Number(
+          process.env.THROTTLE_LONG_LIMIT ??
+            (process.env.STAGE === 'prod' ? 10000 : 1000),
+        ),
       },
     ]),
 

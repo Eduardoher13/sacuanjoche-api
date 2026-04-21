@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { ContentTypeGuard } from './common/guards/content-type.guard';
 import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
@@ -9,10 +10,13 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: true,
     rawBody: false,
   });
+
+  // Respect X-Forwarded-* headers when running behind reverse proxies/load balancers.
+  app.set('trust proxy', 1);
 
   // ========== HELMET - Headers de seguridad HTTP ==========
   app.use(
