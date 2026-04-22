@@ -4,6 +4,7 @@ import {
   Param,
   ParseIntPipe,
   Res,
+  HttpException,
   HttpStatus,
   Query,
 } from '@nestjs/common';
@@ -73,8 +74,11 @@ export class ReportsController {
 
       pdfDoc.pipe(res);
       pdfDoc.end();
-    } catch (error) {
-      if (error.status === HttpStatus.NOT_FOUND) {
+    } catch (error: unknown) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.NOT_FOUND
+      ) {
         res.status(HttpStatus.NOT_FOUND).json({
           statusCode: HttpStatus.NOT_FOUND,
           message: error.message,
@@ -131,8 +135,11 @@ export class ReportsController {
 
       pdfDoc.pipe(res);
       pdfDoc.end();
-    } catch (error) {
-      if (error.status === HttpStatus.NOT_FOUND) {
+    } catch (error: unknown) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.NOT_FOUND
+      ) {
         res.status(HttpStatus.NOT_FOUND).json({
           statusCode: HttpStatus.NOT_FOUND,
           message: error.message,

@@ -111,7 +111,7 @@ export class OrdenTrabajoReport {
       solicitadoPor: { x: 140 , y: 145 },
       telOficina: { x: 250, y: 187 },
       // Arreglos florales más a la derecha
-      arreglosStart: { x: 130, y: 225, gap: 6 },
+      arreglosStart: { x: 100, y: 225, gap: 6 },
       cintaTarjeta: { x: 160, y: 330 },
       transporte: { x: 230, y: 3 },
       // Factura: abajo a la derecha, un poco más arriba que la fecha
@@ -120,16 +120,19 @@ export class OrdenTrabajoReport {
       fechaEntrega: { x: 135, y: 400 },
     };
 
+    // Margen derecho más amplio para forzar salto de línea temprano
+    // y evitar recortes en impresión física.
     const arreglosBlockWidth = Math.max(
-      140,
-      PAGE_WIDTH - positions.arreglosStart.x - 15,
+      95,
+      PAGE_WIDTH - positions.arreglosStart.x - 70,
     );
 
     const arreglosStack = Array.from({
       length: Math.max(4, arreglosFlorales.length),
     }).map((_, i) => ({
       text: arreglosFlorales[i] || '',
-      fontSize: 9,
+      fontSize: 7,
+      lineHeight: 1,
       width: arreglosBlockWidth,
       // Deja un margen visual entre items; si el texto se parte, el siguiente baja.
       margin: [0, 0, 0, positions.arreglosStart.gap],
