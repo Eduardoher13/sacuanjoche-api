@@ -78,7 +78,6 @@ export class OrdenTrabajoReport {
     });
 
     // Datos financieros (solo los necesarios)
-    const valor = Number(pedidoCompleto.totalPedido || 0);
     const transporte = pedidoCompleto.envio?.costoEnvio 
       ? Number(pedidoCompleto.envio.costoEnvio) 
       : 0;
@@ -104,18 +103,16 @@ export class OrdenTrabajoReport {
     // Posiciones para A5 (14.8cm x 21.0cm), más a la izquierda y arriba
     const positions = {
 
-     nombresContacto: { x: 110, y: 105 },
-
+     nombresContacto: { x: 125, y: 103 },
+        
       // Enviarse a: primera línea (más arriba), un poco a la derecha
-      direccionesEntrega: { x: 70, y: 120 },
+      direccionesEntrega: { x: 100, y: 117 },
       // Solicitado por y Tel Oficina en la misma línea
-      solicitadoPor: { x: 130 , y: 145 },
-      telOficina: { x: 245, y: 193 },
+      solicitadoPor: { x: 140 , y: 145 },
+      telOficina: { x: 250, y: 187 },
       // Arreglos florales más a la derecha
-      arreglosStart: { x: 130, y: 220, gap: 6 },
+      arreglosStart: { x: 130, y: 225, gap: 6 },
       cintaTarjeta: { x: 160, y: 330 },
-      // Valor: más a la izquierda, manteniendo la altura relativa
-      valor: { x: 110, y: 320 },
       transporte: { x: 230, y: 3 },
       // Factura: abajo a la derecha, un poco más arriba que la fecha
       factura: { x: 260, y: 315},
@@ -174,11 +171,6 @@ export class OrdenTrabajoReport {
         text: mensaje,
         fontSize: 9,
         absolutePosition: positions.cintaTarjeta,
-      },
-      {
-        text: valor ? valor.toFixed(2) : '',
-        fontSize: 9,
-        absolutePosition: positions.valor,
       },
       {
         text: transporte ? transporte.toFixed(2) : '',
