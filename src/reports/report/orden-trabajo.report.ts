@@ -99,8 +99,9 @@ export class OrdenTrabajoReport {
 
     // Conversión de cm a puntos para pdfmake
     const CM = 28.3464567;
-    const PAGE_WIDTH = Math.round(13.7 * CM);
-    // Posiciones para las medidas exactas solicitadas (13.7cm x 21.4cm), más a la izquierda y arriba
+    const PAGE_WIDTH = Math.round(14.8 * CM);
+    const PAGE_HEIGHT = Math.round(21.0 * CM);
+    // Posiciones para A5 (14.8cm x 21.0cm), más a la izquierda y arriba
     const positions = {
 
      nombresContacto: { x: 110, y: 105 },
@@ -111,7 +112,7 @@ export class OrdenTrabajoReport {
       solicitadoPor: { x: 130 , y: 145 },
       telOficina: { x: 245, y: 193 },
       // Arreglos florales más a la derecha
-      arreglosStart: { x: 130, y: 220, gap: 20 },
+      arreglosStart: { x: 130, y: 220, gap: 6 },
       cintaTarjeta: { x: 160, y: 330 },
       // Valor: más a la izquierda, manteniendo la altura relativa
       valor: { x: 110, y: 320 },
@@ -121,6 +122,21 @@ export class OrdenTrabajoReport {
       // Fecha: abajo a la izquierda
       fechaEntrega: { x: 135, y: 400 },
     };
+
+    const arreglosBlockWidth = Math.max(
+      140,
+      PAGE_WIDTH - positions.arreglosStart.x - 15,
+    );
+
+    const arreglosStack = Array.from({
+      length: Math.max(4, arreglosFlorales.length),
+    }).map((_, i) => ({
+      text: arreglosFlorales[i] || '',
+      fontSize: 9,
+      width: arreglosBlockWidth,
+      // Deja un margen visual entre items; si el texto se parte, el siguiente baja.
+      margin: [0, 0, 0, positions.arreglosStart.gap],
+    }));
 
     const content: any[] = [
 
@@ -147,16 +163,13 @@ export class OrdenTrabajoReport {
         fontSize: 9,
         absolutePosition: positions.telOficina,
       },
-      ...Array.from({ length: Math.max(4, arreglosFlorales.length) }).map(
-        (_, i) => ({
-          text: arreglosFlorales[i] || '',
-          fontSize: 9,
-          absolutePosition: {
-            x: positions.arreglosStart.x,
-            y: positions.arreglosStart.y + positions.arreglosStart.gap * i,
-          },
-        }),
-      ),
+      {
+        stack: arreglosStack,
+        absolutePosition: {
+          x: positions.arreglosStart.x,
+          y: positions.arreglosStart.y,
+        },
+      },
       {
         text: mensaje,
         fontSize: 9,
@@ -185,7 +198,7 @@ export class OrdenTrabajoReport {
     ];
 
     const docDefinition: TDocumentDefinitions = {
-      pageSize: { width: Math.round(13.7 * CM), height: Math.round(21.4 * CM) },
+      pageSize: { width: PAGE_WIDTH, height: PAGE_HEIGHT },
       pageOrientation: 'portrait',
       pageMargins: [0, 0, 0, 0],
       defaultStyle: {
