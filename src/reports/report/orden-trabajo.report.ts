@@ -4,10 +4,7 @@ import { PedidoService } from '../../pedido/pedido.service';
 import { PrinterService } from '../../printer/printer.service';
 import { Repository } from 'typeorm';
 import { Pedido } from '../../pedido/entities/pedido.entity';
-import { TDocumentDefinitions } from 'pdfmake/interfaces';
-import { join } from 'path';
-import * as fs from 'fs';
-import { text } from 'stream/consumers';
+import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 @Injectable()
 export class OrdenTrabajoReport {
@@ -100,22 +97,36 @@ export class OrdenTrabajoReport {
     const CM = 28.3464567;
     const PAGE_WIDTH = Math.round(14.8 * CM);
     const PAGE_HEIGHT = Math.round(21.0 * CM);
+
+    const fontSizeBase = 8;
+    const arregloFontSize = 8;
+    const arregloLineHeight = 1.1;
+
+    const estimateLines = (
+      value: string,
+      width: number,
+      fontSize: number,
+    ): number => {
+      if (!value) return 1;
+      const avgCharWidth = fontSize * 0.46;
+      const charsPerLine = Math.max(10, Math.floor(width / avgCharWidth));
+      return Math.max(1, Math.ceil(value.length / charsPerLine));
+    };
+
     // Posiciones para A5 (14.8cm x 21.0cm), más a la izquierda y arriba
     const positions = {
-
-     nombresContacto: { x: 125, y: 103 },
-        
+      nombresContacto: { x: 125, y: 103 },
       // Enviarse a: primera línea (más arriba), un poco a la derecha
       direccionesEntrega: { x: 100, y: 117 },
       // Solicitado por y Tel Oficina en la misma línea
-      solicitadoPor: { x: 140 , y: 145 },
+      solicitadoPor: { x: 140, y: 145 },
       telOficina: { x: 250, y: 187 },
       // Arreglos florales más a la derecha
       arreglosStart: { x: 100, y: 225, gap: 6 },
       cintaTarjeta: { x: 160, y: 330 },
       transporte: { x: 230, y: 3 },
       // Factura: abajo a la derecha, un poco más arriba que la fecha
-      factura: { x: 260, y: 315},
+      factura: { x: 260, y: 315 },
       // Fecha: abajo a la izquierda
       fechaEntrega: { x: 135, y: 400 },
     };
@@ -127,69 +138,173 @@ export class OrdenTrabajoReport {
       PAGE_WIDTH - positions.arreglosStart.x - 70,
     );
 
-    const arreglosStack = Array.from({
-      length: Math.max(4, arreglosFlorales.length),
-    }).map((_, i) => ({
-      text: arreglosFlorales[i] || '',
-      fontSize: 7,
-      lineHeight: 1,
-      width: arreglosBlockWidth,
-      // Deja un margen visual entre items; si el texto se parte, el siguiente baja.
-      margin: [0, 0, 0, positions.arreglosStart.gap],
-    }));
+    const arregloGap: number = positions.arreglosStart.gap;
+    const arregloLineHeightPt = arregloFontSize * arregloLineHeight;
+    const minRows = Math.max(4, arreglosFlorales.length);
 
-    const content: any[] = [
+    const estimatedArreglosHeight = Array.from({ length: minRows }).reduce<number>(
+      (total, _, i) => {
+        const textValue = arreglosFlorales[i] || '';
+        const lines = estimateLines(textValue, arreglosBlockWidth, arregloFontSize);
+        return total + lines * arregloLineHeightPt + arregloGap;
+      },
+      0,
+    );
 
-      {
-        text: ContactoNombre,
-        fontSize: 9,
-        absolutePosition: positions.nombresContacto,
-      },
+    const arreglosBottomY =
+      positions.arreglosStart.y + Math.max(estimatedArreglosHeight, 0);
 
-      {
-        text: direccionEntrega,
-        fontSize: 9,
-        // Si el texto es largo, se partirá en varias líneas dentro de este ancho
-        width: Math.max(120, PAGE_WIDTH - positions.direccionesEntrega.x - 15),
-        absolutePosition: positions.direccionesEntrega,
+    // Desplaza secciones de abajo cuando las descripciones de arreglos crecen.
+    const sectionSpacing = 10;
+    const adjustedCintaY = Math.max(
+      positions.cintaTarjeta.y,
+      arreglosBottomY + sectionSpacing,
+    );
+
+    const facturaToCintaOffset = positions.factura.y - positions.cintaTarjeta.y;
+    const adjustedFacturaY = Math.max(
+      positions.factura.y,
+      adjustedCintaY + facturaToCintaOffset,
+    );
+
+    const fechaToFacturaOffset = positions.fechaEntrega.y - positions.factura.y;
+    const adjustedFechaY = Math.min(
+      PAGE_HEIGHT - 14,
+      Math.max(positions.fechaEntrega.y, adjustedFacturaY + fechaToFacturaOffset),
+    );
+
+    const arreglosTexto = Array.from({ length: minRows })
+      .map((_, i) => arreglosFlorales[i] || ' ')
+      .join('\n\n');
+
+    const sections: Record<string, Content> = {
+      header: {
+        absolutePosition: positions.transporte,
+        columns: [
+          {
+            width: 'auto',
+            text: transporte ? transporte.toFixed(2) : '',
+            fontSize: fontSizeBase,
+          },
+        ],
       },
-      {
-        text: clienteNombre,
-        fontSize: 9,
-        absolutePosition: positions.solicitadoPor,
+      destinatario: {
+        absolutePosition: {
+          x: positions.direccionesEntrega.x,
+          y: positions.nombresContacto.y,
+        },
+        width: PAGE_WIDTH - positions.direccionesEntrega.x - 15,
+        stack: [
+          {
+            columns: [
+              {
+                width: 'auto',
+                text: ContactoNombre,
+                fontSize: fontSizeBase,
+                margin: [
+                  Math.max(0, positions.nombresContacto.x - positions.direccionesEntrega.x),
+                  0,
+                  0,
+                  4,
+                ],
+              },
+            ],
+          },
+          {
+            columns: [
+              {
+                width: '*',
+                text: direccionEntrega,
+                fontSize: fontSizeBase,
+                margin: [0, 0, 0, 6],
+              },
+            ],
+          },
+          {
+            columns: [
+              {
+                width: Math.max(80, positions.telOficina.x - positions.solicitadoPor.x - 10),
+                text: clienteNombre,
+                fontSize: fontSizeBase,
+                margin: [
+                  Math.max(0, positions.solicitadoPor.x - positions.direccionesEntrega.x),
+                  positions.solicitadoPor.y - positions.direccionesEntrega.y - 24,
+                  8,
+                  0,
+                ],
+              },
+              {
+                width: '*',
+                text: telefonoOficina,
+                fontSize: fontSizeBase,
+                margin: [0, positions.telOficina.y - positions.solicitadoPor.y - 2, 0, 0],
+              },
+            ],
+          },
+        ],
       },
-      {
-        text: telefonoOficina,
-        fontSize: 9,
-        absolutePosition: positions.telOficina,
-      },
-      {
-        stack: arreglosStack,
+      arreglos: {
         absolutePosition: {
           x: positions.arreglosStart.x,
           y: positions.arreglosStart.y,
         },
+        columns: [
+          {
+            width: arreglosBlockWidth,
+            text: arreglosTexto,
+            fontSize: arregloFontSize,
+            lineHeight: arregloLineHeight,
+          },
+        ],
       },
-      {
-        text: mensaje,
-        fontSize: 9,
-        absolutePosition: positions.cintaTarjeta,
+      footer: {
+        absolutePosition: {
+          x: positions.cintaTarjeta.x,
+          y: adjustedCintaY,
+        },
+        width: PAGE_WIDTH - positions.cintaTarjeta.x - 20,
+        stack: [
+          {
+            columns: [
+              {
+                width: '*',
+                text: mensaje,
+                fontSize: fontSizeBase,
+                margin: [0, 0, 0, 6],
+              },
+            ],
+          },
+        ],
       },
-      {
-        text: transporte ? transporte.toFixed(2) : '',
-        fontSize: 9,
-        absolutePosition: positions.transporte,
+      factura: {
+        absolutePosition: { x: positions.factura.x, y: adjustedFacturaY },
+        columns: [
+          {
+            width: 'auto',
+            text: numFactura,
+            fontSize: fontSizeBase,
+          },
+        ],
       },
-      {
-        text: numFactura,
-        fontSize: 9,
-        absolutePosition: positions.factura,
+      fecha: {
+        absolutePosition: { x: positions.fechaEntrega.x, y: adjustedFechaY },
+        columns: [
+          {
+            width: 'auto',
+            text: fechaEntrega,
+            fontSize: fontSizeBase,
+          },
+        ],
       },
-      {
-        text: fechaEntrega,
-        fontSize: 9,
-        absolutePosition: positions.fechaEntrega,
-      },
+    };
+
+    const content: Content[] = [
+      sections.header,
+      sections.destinatario,
+      sections.arreglos,
+      sections.footer,
+      sections.factura,
+      sections.fecha,
     ];
 
     const docDefinition: TDocumentDefinitions = {
@@ -198,7 +313,7 @@ export class OrdenTrabajoReport {
       pageMargins: [0, 0, 0, 0],
       defaultStyle: {
         font: 'Roboto',
-        fontSize: 7,
+        fontSize: fontSizeBase,
         color: '#000000',
         lineHeight: 1.1,
       },
