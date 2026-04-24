@@ -97,9 +97,17 @@ export class OrdenTrabajoReport {
     const CM = 28.3464567;
     const PAGE_WIDTH = Math.round(14.8 * CM);
     const PAGE_HEIGHT = Math.round(21.0 * CM);
+    const cmToPt = (valueCm: number): number =>
+      Number((valueCm * CM).toFixed(2));
 
-    const fontSizeBase = 8;
-    const arregloFontSize = 8;
+    // Activa guía visual con: ORDEN_TRABAJO_DEBUG=true
+    const debugFlagRaw = process.env.ORDEN_TRABAJO_DEBUG ?? '';
+    const DEBUG_LAYOUT = ['1', 'true', 'yes', 'on'].includes(
+      debugFlagRaw.trim().toLowerCase(),
+    );
+
+    const fontSizeBase = 11;
+    const arregloFontSize = 11;
     const arregloLineHeight = 1.1;
 
     const estimateLines = (
@@ -113,23 +121,36 @@ export class OrdenTrabajoReport {
       return Math.max(1, Math.ceil(value.length / charsPerLine));
     };
 
-    // Posiciones para A5 (14.8cm x 21.0cm), más a la izquierda y arriba
+    // Posiciones para A5 (14.8cm x 21.0cm)
     const positions = {
-      nombresContacto: { x: 125, y: 103 },
-      // Enviarse a: primera línea (más arriba), un poco a la derecha
-      direccionesEntrega: { x: 100, y: 117 },
-      // Solicitado por y Tel Oficina en la misma línea
-      solicitadoPor: { x: 140, y: 145 },
-      telOficina: { x: 250, y: 187 },
-      // Arreglos florales más a la derecha
-      arreglosStart: { x: 100, y: 225, gap: 6 },
+      // Coordenadas convertidas de cm a pt
+      nombresContacto: { x: cmToPt(3.4), y: cmToPt(5.3) },
+      direccionesEntrega: { x: cmToPt(3.4), y: cmToPt(6.3) },
+      solicitadoPor: { x: cmToPt(4.2), y: cmToPt(7.8) },
+      telOficina: { x: cmToPt(10.5), y: cmToPt(11) },
+      arreglosStart: { x: cmToPt(5.2), y: cmToPt(9.9), gap: 6 },
       cintaTarjeta: { x: 160, y: 330 },
       transporte: { x: 230, y: 3 },
       // Factura: abajo a la derecha, un poco más arriba que la fecha
       factura: { x: 260, y: 315 },
-      // Fecha: abajo a la izquierda
-      fechaEntrega: { x: 135, y: 400 },
+      fechaEntrega: { x: cmToPt(3.9), y: cmToPt(18.1) },
     };
+
+    const debugPoints = [
+      { label: 'nombresContacto', x: positions.nombresContacto.x, y: positions.nombresContacto.y },
+      {
+        label: 'direccionesEntrega',
+        x: positions.direccionesEntrega.x,
+        y: positions.direccionesEntrega.y,
+      },
+      { label: 'solicitadoPor', x: positions.solicitadoPor.x, y: positions.solicitadoPor.y },
+      { label: 'telOficina', x: positions.telOficina.x, y: positions.telOficina.y },
+      { label: 'arreglosStart', x: positions.arreglosStart.x, y: positions.arreglosStart.y },
+      { label: 'cintaTarjeta', x: positions.cintaTarjeta.x, y: positions.cintaTarjeta.y },
+      { label: 'transporte', x: positions.transporte.x, y: positions.transporte.y },
+      { label: 'factura', x: positions.factura.x, y: positions.factura.y },
+      { label: 'fechaEntrega', x: positions.fechaEntrega.x, y: positions.fechaEntrega.y },
+    ];
 
     // Margen derecho más amplio para forzar salto de línea temprano
     // y evitar recortes en impresión física.
@@ -305,7 +326,56 @@ export class OrdenTrabajoReport {
       sections.footer,
       sections.factura,
       sections.fecha,
+      {
+        text: `DEBUG_ENV="${debugFlagRaw || 'undefined'}" | DEBUG_ACTIVE=${DEBUG_LAYOUT}`,
+        fontSize: 8,
+        color: DEBUG_LAYOUT ? '#0a7f00' : '#cc0000',
+        absolutePosition: { x: 8, y: PAGE_HEIGHT - 12 },
+      },
     ];
+
+    if (DEBUG_LAYOUT) {
+      const gridStep = 20;
+      const gridLines: any[] = [];
+
+      for (let x = 0; x <= PAGE_WIDTH; x += gridStep) {
+        gridLines.push({ type: 'line', x1: x, y1: 0, x2: x, y2: PAGE_HEIGHT, lineWidth: 0.3, lineColor: '#dddddd' });
+      }
+
+      for (let y = 0; y <= PAGE_HEIGHT; y += gridStep) {
+        gridLines.push({ type: 'line', x1: 0, y1: y, x2: PAGE_WIDTH, y2: y, lineWidth: 0.3, lineColor: '#dddddd' });
+      }
+
+      const debugContent: Content[] = [
+        {
+          absolutePosition: { x: 0, y: 0 },
+          canvas: gridLines,
+        } as Content,
+      ];
+
+      for (const point of debugPoints) {
+        debugContent.push(
+          {
+            absolutePosition: { x: Math.max(0, point.x - 3), y: Math.max(0, point.y - 3) },
+            canvas: [
+              { type: 'line', x1: 0, y1: 3, x2: 6, y2: 3, lineWidth: 1, lineColor: '#ff0000' },
+              { type: 'line', x1: 3, y1: 0, x2: 3, y2: 6, lineWidth: 1, lineColor: '#ff0000' },
+            ],
+          } as Content,
+          {
+            text: `${point.label} (${point.x}, ${point.y})`,
+            fontSize: 7,
+            color: '#cc0000',
+            absolutePosition: {
+              x: Math.min(PAGE_WIDTH - 95, point.x + 4),
+              y: Math.max(0, point.y - 8),
+            },
+          },
+        );
+      }
+
+      content.push(...debugContent);
+    }
 
     const docDefinition: TDocumentDefinitions = {
       pageSize: { width: PAGE_WIDTH, height: PAGE_HEIGHT },
@@ -314,6 +384,7 @@ export class OrdenTrabajoReport {
       defaultStyle: {
         font: 'Roboto',
         fontSize: fontSizeBase,
+        bold: true,
         color: '#000000',
         lineHeight: 1.1,
       },
