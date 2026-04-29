@@ -106,8 +106,8 @@ export class OrdenTrabajoReport {
       debugFlagRaw.trim().toLowerCase(),
     );
 
-    const fontSizeBase = 11;
-    const arregloFontSize = 11;
+    const fontSizeBase = 12;
+    const arregloFontSize = 12;
     const arregloLineHeight = 1.1;
 
     const estimateLines = (
@@ -358,7 +358,7 @@ export class OrdenTrabajoReport {
           } as Content,
           {
             text: `${point.label} (${point.x}, ${point.y})`,
-            fontSize: 7,
+            fontSize: 8,
             color: '#cc0000',
             absolutePosition: {
               x: Math.min(PAGE_WIDTH - 95, point.x + 4),
