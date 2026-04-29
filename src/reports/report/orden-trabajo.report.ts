@@ -326,12 +326,6 @@ export class OrdenTrabajoReport {
       sections.footer,
       sections.factura,
       sections.fecha,
-      {
-        text: `DEBUG_ENV="${debugFlagRaw || 'undefined'}" | DEBUG_ACTIVE=${DEBUG_LAYOUT}`,
-        fontSize: 8,
-        color: DEBUG_LAYOUT ? '#0a7f00' : '#cc0000',
-        absolutePosition: { x: 8, y: PAGE_HEIGHT - 12 },
-      },
     ];
 
     if (DEBUG_LAYOUT) {
