@@ -127,13 +127,13 @@ export class OrdenTrabajoReport {
       nombresContacto: { x: cmToPt(3.4), y: cmToPt(5.3) },
       direccionesEntrega: { x: cmToPt(3.4), y: cmToPt(6.3) },
       solicitadoPor: { x: cmToPt(4.2), y: cmToPt(7.8) },
-      telOficina: { x: cmToPt(10.5), y: cmToPt(11) },
-      arreglosStart: { x: cmToPt(5.2), y: cmToPt(9.9), gap: 6 },
+      telOficina: { x: cmToPt(10.8), y: cmToPt(10.9) },
+      arreglosStart: { x: cmToPt(5.2), y: cmToPt(10.2), gap: 6 },
       cintaTarjeta: { x: 160, y: 330 },
       transporte: { x: 230, y: 3 },
       // Factura: abajo a la derecha, un poco más arriba que la fecha
       factura: { x: 260, y: 315 },
-      fechaEntrega: { x: cmToPt(3.9), y: cmToPt(18.1) },
+      fechaEntrega: { x: cmToPt(3.9), y: cmToPt(18.5) },
     };
 
     const debugPoints = [
