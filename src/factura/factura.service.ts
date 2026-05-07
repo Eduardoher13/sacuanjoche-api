@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Factura } from './entities/factura.entity';
 import { CreateFacturaDto } from './dto/create-factura.dto';
 import { UpdateFacturaDto } from './dto/update-factura.dto';
+import { CrearFacturaManualDto } from './dto/crear-factura-manual.dto';
 import { Pedido } from 'src/pedido/entities/pedido.entity';
 import { Empleado } from 'src/empleado/entities/empleado.entity';
 import { handleDbException } from 'src/common/helpers/db-exception.helper';
@@ -60,6 +61,42 @@ export class FacturaService {
 
       return this.facturaRepository.findOne({
         where: { idFactura: newFactura.idFactura },
+        relations: ['pedido', 'empleado'],
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      handleDbException(error);
+    }
+  }
+
+  async crearFacturaManual(crearFacturaManualDto: CrearFacturaManualDto) {
+    try {
+      const { idEmpleado, montoTotal, estado } = crearFacturaManualDto;
+
+      const empleado = await findEntityOrFail(
+        this.empleadoRepository,
+        { idEmpleado },
+        'El empleado no fue encontrado o no existe',
+      );
+
+      const numFactura = await this.generarNumeroFactura();
+      const idFolio = await this.obtenerFolioFactura();
+
+      const nuevaFactura = this.facturaRepository.create({
+        idPedido: null,
+        idEmpleado: empleado.idEmpleado,
+        numFactura,
+        idFolio,
+        montoTotal,
+        estado: estado || FacturaEstado.PENDIENTE,
+      });
+
+      await this.facturaRepository.save(nuevaFactura);
+
+      return this.facturaRepository.findOne({
+        where: { idFactura: nuevaFactura.idFactura },
         relations: ['pedido', 'empleado'],
       });
     } catch (error) {
@@ -252,19 +289,7 @@ export class FacturaService {
       const numFactura = await this.generarNumeroFactura();
 
       // Generar número de folio para la factura
-      let numeroFactura: string | undefined;
-      let idFolio: number | undefined;
-      try {
-        // Buscar el folio activo para FACTURA
-        const folioFactura = await this.folioService.buscarFolioPorDocumento('FACTURA');
-        if (folioFactura) {
-          numeroFactura = await this.folioService.obtenerSiguienteFolio('FACTURA');
-          idFolio = folioFactura.idFolio;
-        }
-      } catch (error) {
-        // Si no existe el folio, continuar sin número de factura
-        // No lanzar error para no bloquear la creación de la factura
-      }
+      const idFolio = await this.obtenerFolioFactura();
 
       // Crear la factura copiando información del pedido
       const nuevaFactura = this.facturaRepository.create({
@@ -337,5 +362,22 @@ export class FacturaService {
     const numeroFormateado = siguienteNumero.toString().padStart(4, '0');
 
     return `${prefijo}${numeroFormateado}`;
+  }
+
+  private async obtenerFolioFactura(): Promise<number | undefined> {
+    try {
+      const folioFactura = await this.folioService.buscarFolioPorDocumento(
+        'FACTURA',
+      );
+
+      if (!folioFactura) {
+        return undefined;
+      }
+
+      await this.folioService.obtenerSiguienteFolio('FACTURA');
+      return folioFactura.idFolio;
+    } catch (error) {
+      return undefined;
+    }
   }
 }

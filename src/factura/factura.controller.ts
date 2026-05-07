@@ -26,6 +26,7 @@ import { UpdateFacturaDto } from './dto/update-factura.dto';
 import { Factura } from './entities/factura.entity';
 import { FindFacturasDto } from './dto/find-facturas.dto';
 import { CrearFacturaDesdePedidoDto } from './dto/crear-factura-desde-pedido.dto';
+import { CrearFacturaManualDto } from './dto/crear-factura-manual.dto';
 import { Auth } from 'src/auth/decorators';
 import { ValidRoles } from 'src/auth/interfaces';
 
@@ -51,6 +52,22 @@ export class FacturaController {
   })
   create(@Body() createFacturaDto: CreateFacturaDto) {
     return this.facturaService.create(createFacturaDto);
+  }
+
+  @Post('manual')
+  @Auth(ValidRoles.admin, ValidRoles.vendedor)
+  @ApiOperation({ summary: 'Crear una factura manual sin pedido' })
+  @ApiResponse({
+    status: 201,
+    description: 'Factura manual creada exitosamente',
+    type: Factura,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Datos de entrada inválidos',
+  })
+  crearFacturaManual(@Body() crearFacturaManualDto: CrearFacturaManualDto) {
+    return this.facturaService.crearFacturaManual(crearFacturaManualDto);
   }
 
   @Post('desde-pedido/:idPedido')

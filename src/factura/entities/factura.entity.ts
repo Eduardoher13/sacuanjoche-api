@@ -10,8 +10,8 @@ export class Factura {
   @PrimaryGeneratedColumn({ name: 'id_factura' })
   idFactura: number;
 
-  @Column({ name: 'id_pedido' })
-  idPedido: number;
+  @Column({ name: 'id_pedido', nullable: true })
+  idPedido?: number | null;
 
   @Column({ name: 'id_empleado' })
   idEmpleado: number;
@@ -38,9 +38,12 @@ export class Factura {
   montoTotal: number;
 
   // Relaciones
-  @OneToOne(() => Pedido, pedido => pedido.factura)
+  @OneToOne(() => Pedido, pedido => pedido.factura, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'id_pedido' })
-  pedido: Pedido;
+  pedido?: Pedido | null;
 
   @ManyToOne(() => Empleado, empleado => empleado.facturas)
   @JoinColumn({ name: 'id_empleado' })

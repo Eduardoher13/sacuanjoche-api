@@ -36,6 +36,8 @@ import { PrinterModule } from './printer/printer.module';
 import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -87,8 +89,8 @@ import { NotificationsModule } from './notifications/notifications.module';
       autoLoadEntities: true,
 
       // IMPORTANT: Never synchronize schema automatically in production
-      // Control with env var to allow sync only in local development
-      synchronize: process.env.TYPEORM_SYNC === 'true',
+      // Allow schema sync in development for rapid iteration, but never in production.
+      synchronize: !isProduction && process.env.TYPEORM_SYNC !== 'false',
     }),
 
     ServeStaticModule.forRoot({
