@@ -58,6 +58,15 @@ export class PrinterService {
       tableLayouts: customTableLayouts,
     },
   ): PDFKit.PDFDocument {
+    return this.createPdfKitDocument(docDefinition, options);
+  }
+
+  createPdfKitDocument(
+    docDefinition: TDocumentDefinitions,
+    options: BufferOptions = {
+      tableLayouts: customTableLayouts,
+    },
+  ): PDFKit.PDFDocument {
     return this.printer.createPdfKitDocument(docDefinition, options);
   }
 }

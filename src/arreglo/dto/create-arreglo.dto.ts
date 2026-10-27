@@ -52,7 +52,6 @@ export class CreateArregloDto {
   @MaxLength(200)
   @AllowedCharacters()
   @NoSqlInjection()
-  @NoRandomString()
   @NoExcessiveRepetition(4)
   nombre: string;
 
