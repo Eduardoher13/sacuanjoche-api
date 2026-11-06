@@ -37,6 +37,10 @@ import { ReportsModule } from './reports/reports.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
 const isProduction = process.env.NODE_ENV === 'production';
+const databaseSsl =
+  process.env.PGSSLMODE === 'require' ||
+  process.env.STAGE === 'prod' ||
+  isProduction;
 
 @Module({
   imports: [
@@ -75,17 +79,16 @@ const isProduction = process.env.NODE_ENV === 'production';
     ]),
 
     TypeOrmModule.forRoot({
-      ssl: process.env.STAGE === 'prod',
+      ssl: databaseSsl,
       extra: {
-        ssl:
-          process.env.STAGE === 'prod' ? { rejectUnauthorized: false } : null,
+        ...(databaseSsl && { ssl: { rejectUnauthorized: false } }),
       },
       type: 'postgres',
-      host: process.env.DB_HOST,
-      port: +process.env.DB_PORT!,
-      database: process.env.DB_NAME,
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
+      host: process.env.DB_HOST ?? process.env.PGHOST,
+      port: Number(process.env.DB_PORT ?? process.env.PGPORT ?? 5432),
+      database: process.env.DB_NAME ?? process.env.PGDATABASE,
+      username: process.env.DB_USERNAME ?? process.env.PGUSER,
+      password: process.env.DB_PASSWORD ?? process.env.PGPASSWORD,
       autoLoadEntities: true,
 
       // IMPORTANT: Never synchronize schema automatically in production
