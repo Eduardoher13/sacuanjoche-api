@@ -37,7 +37,7 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:3000', // Para pruebas locales con Postman o frontend local
     'http://localhost:5173',
-    'https://floristeriasacuanjoche.netlify.app/',
+    'https://floristeriasacuanjoche.netlify.app',
     'https://sacuanjoche-api.onrender.com',
     'http://127.0.0.1:3000',
 
