@@ -13,7 +13,7 @@ import {
   mmToPt,
 } from './a5-layout';
 
-const BACKGROUND_IMAGE_PATH = resolve(__dirname, '../../../a5-1.png');
+const BACKGROUND_IMAGE_PATH = resolve(__dirname, '../../../Orden-de-trabajo-a5.png');
 const SOURCE_PAGE_SIZE_MM = { width: 133, height: 200 };
 const SCALE_X = A5_PAGE_SIZE_MM.width / SOURCE_PAGE_SIZE_MM.width;
 const SCALE_Y = A5_PAGE_SIZE_MM.height / SOURCE_PAGE_SIZE_MM.height;
@@ -30,12 +30,12 @@ interface CampoTemplate {
 // Coordenadas del formulario anterior, medidas en una hoja de 133 x 200 mm.
 // Se transforman a A5 para conservar la alineación con el diseño ampliado.
 const CAMPOS: CampoTemplate[] = [
-  { key: 'contacto', x: 25, y: 48, width: 90, fontSize: 11 },
-  { key: 'direccion', x: 23, y: 55, width: 90, fontSize: 11 },
-  { key: 'solicitado', x: 30, y: 75, width: 85, fontSize: 11 },
-  { key: 'telefono', x: 95, y: 101, width: 40, fontSize: 11 },
-  { key: 'arreglo1', x: 40, y: 108, width: 55, fontSize: 11, lineHeight: 1.35 },
-  { key: 'fecha', x: 25, y: 185, width: 50, fontSize: 11 },
+  { key: 'contacto', x: 30, y: 50, width: 90, fontSize: 11 },
+  { key: 'direccion', x: 15, y: 57, width: 90, fontSize: 11 },
+  { key: 'solicitado', x: 40, y: 70, width: 85, fontSize: 11 },
+  { key: 'telefono', x: 85, y: 89, width: 40, fontSize: 11 },
+  { key: 'arreglo1', x: 60, y: 98, width: 55, fontSize: 11, lineHeight: 1.35 },
+  { key: 'fecha', x: 45, y: 185, width: 50, fontSize: 11 },
 ];
 
 function isDebugFlagEnabled(value: string | undefined): boolean {
