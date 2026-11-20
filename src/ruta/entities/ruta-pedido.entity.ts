@@ -74,7 +74,9 @@ export class RutaPedido {
   @JoinColumn({ name: 'id_ruta' })
   ruta: Ruta;
 
-  @ManyToOne(() => Pedido, (pedido) => pedido.rutaPedidos)
+  @ManyToOne(() => Pedido, (pedido) => pedido.rutaPedidos, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'id_pedido' })
   pedido: Pedido;
 }

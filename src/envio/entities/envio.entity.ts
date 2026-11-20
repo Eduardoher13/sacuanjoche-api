@@ -76,7 +76,9 @@ export class Envio {
   idRuta?: number;
 
   // Relaciones
-  @OneToOne(() => Pedido, (pedido) => pedido.envio)
+  @OneToOne(() => Pedido, (pedido) => pedido.envio, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'id_pedido' })
   pedido: Pedido;
 

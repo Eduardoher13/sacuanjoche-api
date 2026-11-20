@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Pedido } from '../../pedido/entities/pedido.entity';
 import { Empleado } from '../../empleado/entities/empleado.entity';
 import { PedidoEstado } from '../../common/enums';
@@ -38,12 +45,13 @@ export class PedidoHistorial {
   nota: string;
 
   // Relaciones
-  @ManyToOne(() => Pedido, pedido => pedido.historial)
+  @ManyToOne(() => Pedido, (pedido) => pedido.historial, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'id_pedido' })
   pedido: Pedido;
 
-  @ManyToOne(() => Empleado, empleado => empleado.pedidosHistorial)
+  @ManyToOne(() => Empleado, (empleado) => empleado.pedidosHistorial)
   @JoinColumn({ name: 'id_empleado' })
   empleado: Empleado;
 }
-

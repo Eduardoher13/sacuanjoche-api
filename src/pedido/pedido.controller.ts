@@ -48,7 +48,12 @@ export class PedidoController {
   }
 
   @Get()
-  @Auth(ValidRoles.admin, ValidRoles.vendedor, ValidRoles.conductor, ValidRoles.cliente)
+  @Auth(
+    ValidRoles.admin,
+    ValidRoles.vendedor,
+    ValidRoles.conductor,
+    ValidRoles.cliente,
+  )
   @ApiOperation({ summary: 'Obtener todos los pedidos con paginación' })
   @ApiQuery({
     name: 'q',
@@ -76,7 +81,12 @@ export class PedidoController {
   }
 
   @Get(':id')
-  @Auth(ValidRoles.admin, ValidRoles.vendedor, ValidRoles.conductor, ValidRoles.cliente)
+  @Auth(
+    ValidRoles.admin,
+    ValidRoles.vendedor,
+    ValidRoles.conductor,
+    ValidRoles.cliente,
+  )
   @ApiOperation({ summary: 'Obtener un pedido por ID' })
   @ApiParam({ name: 'id', description: 'ID del pedido', example: 1 })
   @ApiResponse({
@@ -117,7 +127,7 @@ export class PedidoController {
   }
 
   @Delete(':id')
-  @Auth(ValidRoles.admin)
+  @Auth(ValidRoles.admin, ValidRoles.superuser)
   @ApiOperation({ summary: 'Eliminar un pedido' })
   @ApiParam({ name: 'id', description: 'ID del pedido', example: 1 })
   @ApiResponse({

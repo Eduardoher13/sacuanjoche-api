@@ -31,7 +31,9 @@ export class DetallePedido {
   subtotal: number;
 
   // Relaciones
-  @ManyToOne(() => Pedido, (pedido) => pedido.detallesPedido)
+  @ManyToOne(() => Pedido, (pedido) => pedido.detallesPedido, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'id_pedido' })
   pedido: Pedido;
 

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Pedido } from './entities/pedido.entity';
 import { CreatePedidoDto } from './dto/create-pedido.dto';
 import { UpdatePedidoDto } from './dto/update-pedido.dto';
@@ -48,6 +48,7 @@ export class PedidoService {
     private readonly folioRepository: Repository<Folio>,
     private readonly pedidoHistorialService: PedidoHistorialService,
     private readonly folioService: FolioService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createPedidoDto: CreatePedidoDto) {
@@ -219,7 +220,10 @@ export class PedidoService {
         }
 
         // .padStart rellena con ceros a la izquierda hasta que alcanza la longitud establecida para ese folio
-        const numeroFormateado = String(siguiente).padStart(folio.longitud, '0');
+        const numeroFormateado = String(siguiente).padStart(
+          folio.longitud,
+          '0',
+        );
 
         if (folio.mascara) {
           numeroPedido = folio.mascara.replace(/\{0+\}/, numeroFormateado);
@@ -255,8 +259,13 @@ export class PedidoService {
         contactoEntrega,
       };
 
-      if (pedidoData.fechaEntregaEstimada !== undefined && pedidoData.fechaEntregaEstimada !== null) {
-        pedidoData.fechaEntregaEstimada = this.parseDateString(pedidoData.fechaEntregaEstimada);
+      if (
+        pedidoData.fechaEntregaEstimada !== undefined &&
+        pedidoData.fechaEntregaEstimada !== null
+      ) {
+        pedidoData.fechaEntregaEstimada = this.parseDateString(
+          pedidoData.fechaEntregaEstimada,
+        );
       }
 
       const newPedido = this.pedidoRepository.create(pedidoData);
@@ -264,7 +273,9 @@ export class PedidoService {
       const savedPedido = await this.pedidoRepository.save(newPedido);
 
       // TypeORM save puede devolver Pedido | Pedido[], pero como pasamos un solo objeto, es Pedido
-      const pedidoGuardado = Array.isArray(savedPedido) ? savedPedido[0] : savedPedido;
+      const pedidoGuardado = Array.isArray(savedPedido)
+        ? savedPedido[0]
+        : savedPedido;
 
       return await this.pedidoRepository.findOne({
         where: { idPedido: pedidoGuardado.idPedido },
@@ -332,7 +343,14 @@ export class PedidoService {
   async findOne(id: number) {
     const pedido = await this.pedidoRepository.findOne({
       where: { idPedido: id },
-      relations: ['empleado', 'cliente', 'direccion', 'contactoEntrega', 'envio', 'folio'],
+      relations: [
+        'empleado',
+        'cliente',
+        'direccion',
+        'contactoEntrega',
+        'envio',
+        'folio',
+      ],
     });
 
     if (!pedido) {
@@ -428,8 +446,24 @@ export class PedidoService {
   }
 
   async remove(id: number) {
-    const pedido = await this.findOne(id);
-    await this.pedidoRepository.remove(pedido!);
+    await this.findOne(id);
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.delete(DetallePedido, { idPedido: id });
+      await manager.query('DELETE FROM pedido_historial WHERE id_pedido = $1', [
+        id,
+      ]);
+      await manager.query('DELETE FROM ruta_pedido WHERE id_pedido = $1', [id]);
+      await manager.query('DELETE FROM envio WHERE id_pedido = $1', [id]);
+
+      const result = await manager.delete(Pedido, { idPedido: id });
+
+      if (result.affected === 0) {
+        throw new NotFoundException(`El pedido con id ${id} no fue encontrado`);
+      }
+    });
+
+    return { message: 'Pedido eliminado exitosamente' };
   }
 
   /**
@@ -583,7 +617,7 @@ export class PedidoService {
 
     // Crear fecha (month - 1 porque Date usa 0-11 para meses)
     const date = new Date(year, month - 1, day);
-    
+
     // Validar que la fecha sea válida
     if (isNaN(date.getTime())) {
       throw new BadRequestException(

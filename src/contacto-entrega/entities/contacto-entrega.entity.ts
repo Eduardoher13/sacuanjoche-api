@@ -12,8 +12,8 @@ export class ContactoEntrega {
   @Column({ name: 'apellido', type: 'varchar', length: 100 })
   apellido: string;
 
-  @Column({ name: 'telefono', type: 'varchar', length: 20 })
-  telefono: string;
+  @Column({ name: 'telefono', type: 'varchar', length: 20, nullable: true })
+  telefono: string | null;
 
   // Relaciones
   @OneToMany(() => Pedido, pedido => pedido.contactoEntrega)
