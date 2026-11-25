@@ -16,13 +16,15 @@ export class AllowedCharactersConstraint
     if (value === undefined || value === null || value === '') {
       return true;
     }
-    
+
     if (typeof value !== 'string') {
       return false;
     }
-    
-    // Permite letras, números, espacios, guiones, guiones bajos y caracteres especiales comunes
-    const allowedPattern = /^[a-zA-Z0-9\s\-_.,;:()áéíóúÁÉÍÓÚñÑ]+$/;
+
+    const allowAddressSymbols = args.constraints[0] === true;
+    const allowedPattern = allowAddressSymbols
+      ? /^[a-zA-Z0-9\s\-_.,;:()áéíóúÁÉÍÓÚñÑ\/#]+$/
+      : /^[a-zA-Z0-9\s\-_.,;:()áéíóúÁÉÍÓÚñÑ]+$/;
     return allowedPattern.test(value);
   }
 
@@ -32,14 +34,26 @@ export class AllowedCharactersConstraint
 }
 
 export function AllowedCharacters(validationOptions?: ValidationOptions) {
+  return createAllowedCharactersDecorator(false, validationOptions);
+}
+
+export function AllowedAddressCharacters(
+  validationOptions?: ValidationOptions,
+) {
+  return createAllowedCharactersDecorator(true, validationOptions);
+}
+
+function createAllowedCharactersDecorator(
+  allowAddressSymbols: boolean,
+  validationOptions?: ValidationOptions,
+) {
   return function (object: Object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,
       options: validationOptions,
-      constraints: [],
+      constraints: [allowAddressSymbols],
       validator: AllowedCharactersConstraint,
     });
   };
 }
-

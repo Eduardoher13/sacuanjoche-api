@@ -10,7 +10,7 @@ import {
   MinLength,
   MaxLength,
 } from 'class-validator';
-import { AllowedCharacters } from '../../validators/allowed-characters.decorator';
+import { AllowedAddressCharacters } from '../../validators/allowed-characters.decorator';
 import { NoSqlInjection } from '../../validators/no-sql-injection.decorator';
 import { NoRandomString } from '../../validators/no-random-string.decorator';
 import { NoExcessiveRepetition } from '../../validators/no-excessive-repetition.decorator';
@@ -23,7 +23,7 @@ export class ForwardGeocodeQueryDto {
   @IsString()
   @MinLength(2)
   @MaxLength(200)
-  @AllowedCharacters()
+  @AllowedAddressCharacters()
   @NoSqlInjection()
   @NoRandomString()
   @NoExcessiveRepetition(4)

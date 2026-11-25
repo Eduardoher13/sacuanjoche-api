@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { PedidoCanal } from '../../common/enums';
-import { AllowedCharacters } from '../../common/validators/allowed-characters.decorator';
+import { AllowedAddressCharacters } from '../../common/validators/allowed-characters.decorator';
 import { NoSqlInjection } from '../../common/validators/no-sql-injection.decorator';
 import { NoRandomAddress } from '../../common/validators/no-random-address.decorator';
 import { NoExcessiveRepetition } from '../../common/validators/no-excessive-repetition.decorator';
@@ -112,7 +112,7 @@ export class CreatePedidoDto {
   })
   @IsNotEmpty({ message: 'La dirección de entrega es requerida' })
   @IsString({ message: 'La dirección de entrega debe ser un texto' })
-  @AllowedCharacters()
+  @AllowedAddressCharacters()
   @NoSqlInjection()
   @NoRandomAddress()
   @NoExcessiveRepetition(4)
